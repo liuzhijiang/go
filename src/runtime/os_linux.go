@@ -497,5 +497,6 @@ func signalM(mp *m, sig int) {
 	if atomic.Load(&touchStackBeforeSignal) != 0 {
 		atomic.Cas((*uint32)(unsafe.Pointer(mp.gsignal.stack.hi-4)), 0, 0)
 	}
+	println("pid:", getpid(), ", procid:", int(mp.procid), ", sig:", sig)
 	tgkill(getpid(), int(mp.procid), sig)
 }

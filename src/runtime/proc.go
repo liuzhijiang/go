@@ -5648,3 +5648,7 @@ func doInit(t *initTask) {
 		t.state = 2 // initialization done
 	}
 }
+
+func Goid() int64 {
+	return getg().goid
+}
