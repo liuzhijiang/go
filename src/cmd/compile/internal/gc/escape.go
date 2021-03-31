@@ -1082,6 +1082,7 @@ func (e *Escape) flow(k EscHole, src *EscLocation) {
 			if Debug.m >= 2 {
 				fmt.Printf("%s: %v escapes to heap:\n", pos, src.n)
 			}
+			fmt.Printf("from flow\n")
 			explanation := e.explainFlow(pos, dst, src, k.derefs, k.notes, []*logopt.LoggedOpt{})
 			if logopt.Enabled() {
 				logopt.LogOpt(src.n.Pos, "escapes", "escape", e.curfn.funcname(), fmt.Sprintf("%v escapes to heap", src.n), explanation)
@@ -1147,12 +1148,20 @@ func (e *Escape) walkOne(root *EscLocation, walkgen uint32, enqueue func(*EscLoc
 	root.derefs = 0
 	root.dst = nil
 
+	if Debug.m >= 2 {
+		fmt.Printf("process root:%v\n", root.n)
+	}
+
 	todo := []*EscLocation{root} // LIFO queue
 	for len(todo) > 0 {
 		l := todo[len(todo)-1]
 		todo = todo[:len(todo)-1]
 
 		base := l.derefs
+
+		if Debug.m >= 2 {
+			fmt.Printf("process l:%v, base:%d\n", l.n, base)
+		}
 
 		// If l.derefs < 0, then l's address flows to root.
 		addressOf := base < 0
@@ -1216,6 +1225,9 @@ func (e *Escape) walkOne(root *EscLocation, walkgen uint32, enqueue func(*EscLoc
 				continue
 			}
 			derefs := base + edge.derefs
+			if Debug.m >= 2 {
+				fmt.Printf("next process src:%v, derefs:%d\n", edge.src.n, derefs)
+			}
 			if edge.src.walkgen != walkgen || edge.src.derefs > derefs {
 				edge.src.walkgen = walkgen
 				edge.src.derefs = derefs
@@ -1247,6 +1259,7 @@ func (e *Escape) explainPath(root, src *EscLocation) []*logopt.LoggedOpt {
 			Fatalf("path inconsistency: %v != %v", edge.src, src)
 		}
 
+		fmt.Printf("from explainPath\n")
 		explanation = e.explainFlow(pos, dst, src, edge.derefs, edge.notes, explanation)
 
 		if dst == root {
@@ -1259,6 +1272,7 @@ func (e *Escape) explainPath(root, src *EscLocation) []*logopt.LoggedOpt {
 }
 
 func (e *Escape) explainFlow(pos string, dst, srcloc *EscLocation, derefs int, notes *EscNote, explanation []*logopt.LoggedOpt) []*logopt.LoggedOpt {
+	fmt.Printf("in explainFlow\n")
 	ops := "&"
 	if derefs >= 0 {
 		ops = strings.Repeat("*", derefs)
