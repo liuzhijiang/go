@@ -675,7 +675,14 @@ func (s *regAllocState) init(f *Func) {
 			// Instead, we mark the corresponding Selects as needReg.
 		}
 	}
+
+	if isDebug(f.Name) {
+		fmt.Printf("begin to compute live\n")
+	}
 	s.computeLive()
+	if isDebug(f.Name) {
+		fmt.Printf("finish compute live\n")
+	}
 
 	// Compute primary predecessors.
 	s.primary = make([]int32, f.NumBlocks())
@@ -864,11 +871,31 @@ func (s *regAllocState) regalloc(f *Func) {
 		for _, e := range s.live[b.ID] {
 			s.addUse(e.ID, int32(len(b.Values))+e.dist, e.pos) // pseudo-uses from beyond end of block
 			regValLiveSet.add(e.ID)
+			if isDebug(f.Name) {
+				fmt.Printf("live value:%d, dist:%d, value count:%d, dist:%d\n",
+					e.ID, s.values[e.ID].uses.dist, len(b.Values), e.dist)
+			}
 		}
 		for _, v := range b.ControlValues() {
 			if s.values[v.ID].needReg {
 				s.addUse(v.ID, int32(len(b.Values)), b.Pos) // pseudo-use by control values
 				regValLiveSet.add(v.ID)
+				if isDebug(f.Name) {
+					fmt.Printf("control value:%d, dist:%d, value count:%d\n",
+						v.ID, s.values[v.ID].uses.dist, len(b.Values))
+				}
+			}
+		}
+		if isDebug(f.Name) {
+			fmt.Printf("value info:\n")
+			for _, id := range regValLiveSet.contents() {
+				fmt.Printf("reg value:%d, use:[", id)
+				var use = s.values[id].uses
+				for use != nil {
+					fmt.Printf("dist:%d,", use.dist)
+					use = use.next
+				}
+				fmt.Printf("]\n")
 			}
 		}
 		for i := len(b.Values) - 1; i >= 0; i-- {
@@ -2467,12 +2494,34 @@ func (s *regAllocState) computeLive() {
 	// components as single blocks, duplicated calculated liveness information
 	// out to all of them.
 	po := f.postorder()
+	if isDebug(f.Name) {
+		fmt.Printf("block list:\n")
+		for _, b := range po {
+			fmt.Printf("block:%s, ", b)
+			fmt.Printf("value list:[")
+			for _, v := range b.ControlValues() {
+				fmt.Printf("%s,", v)
+			}
+			fmt.Printf("]\n")
+		}
+		fmt.Printf("\n")
+	}
 	s.loopnest = f.loopnest()
 	s.loopnest.calculateDepths()
+	var loop_count = 0
 	for {
+		loop_count += 1
+		if isDebug(f.Name) {
+			fmt.Printf("loop index:%d\n", loop_count)
+		}
+
 		changed := false
 
 		for _, b := range po {
+			if isDebug(f.Name) {
+				fmt.Printf("process block:%s\n", b)
+			}
+
 			// Start with known live values at the end of the block.
 			// Add len(b.Values) to adjust from end-of-block distance
 			// to beginning-of-block distance.
@@ -2541,10 +2590,20 @@ func (s *regAllocState) computeLive() {
 					desired.addList(v.Args[0].ID, prefs)
 				}
 			}
+			if isDebug(f.Name) {
+				fmt.Printf("live:")
+				for _, e := range live.contents() {
+					fmt.Printf("%d,", e.key)
+				}
+				fmt.Printf("\n")
+			}
 
 			// For each predecessor of b, expand its list of live-at-end values.
 			// invariant: live contains the values live at the start of b (excluding phi inputs)
 			for i, e := range b.Preds {
+				if isDebug(f.Name) {
+					fmt.Printf("process pred block:%s\n", e.b)
+				}
 				p := e.b
 				// Compute additional distance for the edge.
 				// Note: delta must be at least 1 to distinguish the control
@@ -2573,9 +2632,17 @@ func (s *regAllocState) computeLive() {
 
 				// Add new live values from scanning this block.
 				for _, e := range live.contents() {
+					if isDebug(f.Name) {
+						fmt.Printf("process key:%d\n", e.key)
+					}
+
 					d := e.val + delta
 					if !t.contains(e.key) || d < t.get(e.key) {
 						update = true
+						if isDebug(f.Name) {
+							fmt.Printf("add key:%d\n", e.key)
+						}
+
 						t.set(e.key, d, e.aux)
 					}
 				}
@@ -2583,8 +2650,16 @@ func (s *regAllocState) computeLive() {
 				// All phis are at distance delta (we consider them
 				// simultaneously happening at the start of the block).
 				for _, v := range phis {
+					if isDebug(f.Name) {
+						fmt.Printf("process phi:%s\n", v)
+					}
+
 					id := v.Args[i].ID
 					if s.values[id].needReg && (!t.contains(id) || delta < t.get(id)) {
+						if isDebug(f.Name) {
+							fmt.Printf("add phi arg:%d\n", id)
+						}
+
 						update = true
 						t.set(id, delta, v.Pos)
 					}
@@ -2611,6 +2686,37 @@ func (s *regAllocState) computeLive() {
 		}
 	}
 	if f.pass.debug > regDebug {
+		fmt.Println("live values at end of each block")
+		for _, b := range f.Blocks {
+			fmt.Printf("  %s:", b)
+			for _, x := range s.live[b.ID] {
+				fmt.Printf(" v%d(%d)", x.ID, x.dist)
+				for _, e := range s.desired[b.ID].entries {
+					if e.ID != x.ID {
+						continue
+					}
+					fmt.Printf("[")
+					first := true
+					for _, r := range e.regs {
+						if r == noRegister {
+							continue
+						}
+						if !first {
+							fmt.Printf(",")
+						}
+						fmt.Print(&s.registers[r])
+						first = false
+					}
+					fmt.Printf("]")
+				}
+			}
+			if avoid := s.desired[b.ID].avoid; avoid != 0 {
+				fmt.Printf(" avoid=%v", s.RegMaskString(avoid))
+			}
+			fmt.Println()
+		}
+	}
+	if isDebug(f.Name) {
 		fmt.Println("live values at end of each block")
 		for _, b := range f.Blocks {
 			fmt.Printf("  %s:", b)
