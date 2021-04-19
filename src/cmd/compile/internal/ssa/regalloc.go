@@ -141,9 +141,19 @@ const (
 // regalloc performs register allocation on f. It sets f.RegAlloc
 // to the resulting allocation.
 func regalloc(f *Func) {
+	if Debug.Debug_m >= 2 {
+		fmt.Printf("func name:%s\n", f.Name)
+	}
+	if isDebug(f.Name) {
+		fmt.Printf("begin to regalloc for function:%s\n", f.Name)
+	}
 	var s regAllocState
 	s.init(f)
 	s.regalloc(f)
+	if isDebug(f.Name) {
+		fmt.Printf("finish regalloc for function:%s\n", f.Name)
+	}
+
 }
 
 type register uint8
@@ -154,6 +164,12 @@ const noRegister register = 255
 // TODO: regMask -> regSet?
 type regMask uint64
 
+func isDebug(funcName string) bool {
+	if Debug.Debug_m >= 2 && funcName == "test" {
+		return true
+	}
+	return false
+}
 func (m regMask) String() string {
 	s := ""
 	for r := register(0); m != 0; r++ {
@@ -837,6 +853,9 @@ func (s *regAllocState) regalloc(f *Func) {
 		if s.f.pass.debug > regDebug {
 			fmt.Printf("Begin processing block %v\n", b)
 		}
+		if isDebug(f.Name) {
+			fmt.Printf("Begin processing block %v\n", b)
+		}
 		s.curBlock = b
 
 		// Initialize regValLiveSet and uses fields for this block.
@@ -880,6 +899,23 @@ func (s *regAllocState) regalloc(f *Func) {
 			}
 		}
 		if s.f.pass.debug > regDebug {
+			fmt.Printf("use distances for %s\n", b)
+			for i := range s.values {
+				vi := &s.values[i]
+				u := vi.uses
+				if u == nil {
+					continue
+				}
+				fmt.Printf("  v%d:", i)
+				for u != nil {
+					fmt.Printf(" %d", u.dist)
+					u = u.next
+				}
+				fmt.Println()
+			}
+		}
+
+		if isDebug(f.Name) {
 			fmt.Printf("use distances for %s\n", b)
 			for i := range s.values {
 				vi := &s.values[i]
@@ -949,6 +985,13 @@ func (s *regAllocState) regalloc(f *Func) {
 				}
 			}
 
+			if isDebug(f.Name) {
+				fmt.Printf("starting merge block %s with end state of %s:\n", b, p)
+				for _, x := range s.endRegs[p.ID] {
+					fmt.Printf("  %s: orig:%s cache:%s\n", &s.registers[x.r], x.v, x.c)
+				}
+			}
+
 			// Decide on registers for phi ops. Use the registers determined
 			// by the primary predecessor if we can.
 			// TODO: pick best of (already processed) predecessors?
@@ -999,6 +1042,9 @@ func (s *regAllocState) regalloc(f *Func) {
 						c := p.NewValue1(a.Pos, OpCopy, a.Type, s.regs[r].c)
 						s.copies[c] = false
 						if s.f.pass.debug > regDebug {
+							fmt.Printf("copy %s to %s : %s\n", a, c, &s.registers[r2])
+						}
+						if isDebug(f.Name) {
 							fmt.Printf("copy %s to %s : %s\n", a, c, &s.registers[r2])
 						}
 						s.setOrig(c, a)
@@ -1100,6 +1146,12 @@ func (s *regAllocState) regalloc(f *Func) {
 					fmt.Printf("  %s: v%d\n", &s.registers[x.r], x.v.ID)
 				}
 			}
+			if isDebug(f.Name) {
+				fmt.Printf("after phis\n")
+				for _, x := range s.startRegs[b.ID] {
+					fmt.Printf("  %s: v%d\n", &s.registers[x.r], x.v.ID)
+				}
+			}
 		}
 
 		// Allocate space to record the desired registers for each value.
@@ -1189,6 +1241,10 @@ func (s *regAllocState) regalloc(f *Func) {
 			if s.f.pass.debug > regDebug {
 				fmt.Printf("  processing %s\n", v.LongString())
 			}
+			if isDebug(f.Name) {
+				fmt.Printf("  processing %s\n", v.LongString())
+			}
+
 			regspec := s.regspec(v.Op)
 			if v.Op == OpPhi {
 				f.Fatalf("phi %s not at start of block", v)
@@ -1285,6 +1341,25 @@ func (s *regAllocState) regalloc(f *Func) {
 			}
 
 			if s.f.pass.debug > regDebug {
+				fmt.Printf("value %s\n", v.LongString())
+				fmt.Printf("  out:")
+				for _, r := range dinfo[idx].out {
+					if r != noRegister {
+						fmt.Printf(" %s", &s.registers[r])
+					}
+				}
+				fmt.Println()
+				for i := 0; i < len(v.Args) && i < 3; i++ {
+					fmt.Printf("  in%d:", i)
+					for _, r := range dinfo[idx].in[i] {
+						if r != noRegister {
+							fmt.Printf(" %s", &s.registers[r])
+						}
+					}
+					fmt.Println()
+				}
+			}
+			if isDebug(f.Name) {
 				fmt.Printf("value %s\n", v.LongString())
 				fmt.Printf("  out:")
 				for _, r := range dinfo[idx].out {
@@ -1529,6 +1604,9 @@ func (s *regAllocState) regalloc(f *Func) {
 			if s.f.pass.debug > regDebug {
 				fmt.Printf("  processing control %s\n", v.LongString())
 			}
+			if isDebug(f.Name) {
+				fmt.Printf("  processing control %s\n", v.LongString())
+			}
 			// We assume that a control input can be passed in any
 			// type-compatible register. If this turns out not to be true,
 			// we'll need to introduce a regspec for a block's control value.
@@ -1659,6 +1737,10 @@ func (s *regAllocState) regalloc(f *Func) {
 			if s.f.pass.debug > regDebug {
 				fmt.Printf("live-at-end spill for %s at %s\n", s.orig[e.ID], b)
 			}
+			if isDebug(f.Name) {
+				fmt.Printf("live-at-end spill for %s at %s\n", s.orig[e.ID], b)
+			}
+
 			spill := s.makeSpill(s.orig[e.ID], b)
 			s.spillLive[b.ID] = append(s.spillLive[b.ID], spill.ID)
 		}
@@ -1700,6 +1782,10 @@ func (s *regAllocState) regalloc(f *Func) {
 				if s.f.pass.debug > regDebug {
 					fmt.Printf("delete copied value %s\n", c.LongString())
 				}
+				if isDebug(f.Name) {
+					fmt.Printf("delete copied value %s\n", c.LongString())
+				}
+
 				c.RemoveArg(0)
 				f.freeValue(c)
 				delete(s.copies, c)

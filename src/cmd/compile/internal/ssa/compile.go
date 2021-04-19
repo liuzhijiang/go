@@ -20,6 +20,15 @@ import (
 	"time"
 )
 
+type DebugFlags struct {
+	P, B, C, E,
+	K, L, N, S,
+	W, e, h, j,
+	l, Debug_m, r, w int
+}
+
+var Debug DebugFlags
+
 // Compile is the main entry point for this package.
 // Compile modifies f so that on return:
 //   · all Values in f map to 0 or 1 assembly instructions of the target architecture

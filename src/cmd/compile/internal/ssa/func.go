@@ -13,6 +13,8 @@ import (
 	"math"
 	"os"
 	"strings"
+
+	"runtime"
 )
 
 type writeSyncer interface {
@@ -192,6 +194,19 @@ func (f *Func) newValue(op Op, t *types.Type, b *Block, pos src.XPos) *Value {
 		v.argstorage[0] = nil
 	} else {
 		ID := f.vid.get()
+		if Debug.Debug_m >= 2 {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] ID:%d\n", file, line, ID)
+			if ID == 17 {
+				pc := make([]uintptr, 10) // at least 1 entry needed
+				n := runtime.Callers(0, pc)
+				for i := 0; i < n; i++ {
+					f := runtime.FuncForPC(pc[i])
+					call_file, call_line := f.FileLine(pc[i])
+					fmt.Printf("[%v:%v] %s:%d %s\n", file, line, call_file, call_line, f.Name())
+				}
+			}
+		}
 		if int(ID) < len(f.Cache.values) {
 			v = &f.Cache.values[ID]
 			v.ID = ID

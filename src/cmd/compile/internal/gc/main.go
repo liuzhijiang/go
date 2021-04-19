@@ -752,6 +752,7 @@ func Main(archInit func(*Arch)) {
 	Curfn = nil
 	peekitabs()
 
+	ssa.Debug.Debug_m = Debug.m
 	// Phase 8: Compile top level functions.
 	// Don't use range--walk can add functions to xtop.
 	timings.Start("be", "compilefuncs")

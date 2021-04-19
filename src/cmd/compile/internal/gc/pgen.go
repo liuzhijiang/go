@@ -17,6 +17,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"fmt"
 )
 
 // "Portable" code generation.
@@ -227,6 +229,7 @@ func compile(fn *Node) {
 	saveerrors()
 
 	order(fn)
+
 	if nerrors != 0 {
 		return
 	}
@@ -236,7 +239,20 @@ func compile(fn *Node) {
 	// (e.g. in markTypeUsedInInterface).
 	fn.Func.initLSym(true)
 
+	if Debug.m >= 2 {
+		fmt.Printf("before walk\n")
+		fmt.Printf("------------------------\n")
+		fmt.Printf("node:%+v\n", fn)
+		fmt.Printf("------------------------\n")
+	}
 	walk(fn)
+	if Debug.m >= 2 {
+		fmt.Printf("after walk\n")
+		fmt.Printf("------------------------\n")
+		fmt.Printf("node:%+v\n", fn)
+		fmt.Printf("------------------------\n")
+	}
+
 	if nerrors != 0 {
 		return
 	}
@@ -260,6 +276,9 @@ func compile(fn *Node) {
 	// because symbols must be allocated before the parallel
 	// phase of the compiler.
 	for _, n := range fn.Func.Dcl {
+		if Debug.m >= 2 {
+			fmt.Printf("node:%+v\n", n)
+		}
 		switch n.Class() {
 		case PPARAM, PPARAMOUT, PAUTO:
 			if livenessShouldTrack(n) && n.Name.Addrtaken() {

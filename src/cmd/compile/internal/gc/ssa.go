@@ -21,6 +21,8 @@ import (
 	"cmd/internal/objabi"
 	"cmd/internal/src"
 	"cmd/internal/sys"
+
+	"runtime"
 )
 
 var ssaConfig *ssa.Config
@@ -389,6 +391,10 @@ func buildssa(fn *Node, worker int) *ssa.Func {
 
 	s.startBlock(s.f.Entry)
 	s.vars[&memVar] = s.startmem
+	if Debug.m >= 2 {
+		fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+	}
+
 	if s.hasOpenDefers {
 		// Create the deferBits variable and stack slot.  deferBits is a
 		// bitmask showing which of the open-coded defers in this function
@@ -406,6 +412,10 @@ func buildssa(fn *Node, worker int) *ssa.Func {
 		// eliminated, because the defer statements were all
 		// unconditional.
 		s.vars[&memVar] = s.newValue1Apos(ssa.OpVarLive, types.TypeMem, deferBitsTemp, s.mem(), false)
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
+
 	}
 
 	// Generate addresses of local declarations
@@ -438,6 +448,10 @@ func buildssa(fn *Node, worker int) *ssa.Func {
 		}
 	}
 
+	if Debug.m >= 2 {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+	}
 	// Populate SSAable arguments.
 	for _, n := range fn.Func.Dcl {
 		if n.Class() == PPARAM && s.canSSA(n) {
@@ -447,9 +461,22 @@ func buildssa(fn *Node, worker int) *ssa.Func {
 		}
 	}
 
+	if Debug.m >= 2 {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+	}
+
 	// Convert the AST-based IR to the SSA-based IR
 	s.stmtList(fn.Func.Enter)
+	if Debug.m >= 2 {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+	}
 	s.stmtList(fn.Nbody)
+	if Debug.m >= 2 {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+	}
 
 	// fallthrough to exit
 	if s.curBlock != nil {
@@ -464,7 +491,21 @@ func buildssa(fn *Node, worker int) *ssa.Func {
 		}
 	}
 
+	if Debug.m >= 2 {
+		fmt.Printf("before insert phis\n")
+		fmt.Printf("------------------------\n")
+		fmt.Printf("node:%+v\n", fn)
+		fmt.Printf("------------------------\n")
+	}
+
 	s.insertPhis()
+
+	if Debug.m >= 2 {
+		fmt.Printf("after insert phis\n")
+		fmt.Printf("------------------------\n")
+		fmt.Printf("node:%+v\n", fn)
+		fmt.Printf("------------------------\n")
+	}
 
 	// Main call to ssa package to compile function
 	ssa.Compile(s.f)
@@ -1087,6 +1128,10 @@ func (s *state) rawLoad(t *types.Type, src *ssa.Value) *ssa.Value {
 
 func (s *state) store(t *types.Type, dst, val *ssa.Value) {
 	s.vars[&memVar] = s.newValue3A(ssa.OpStore, types.TypeMem, t, dst, val, s.mem())
+	if Debug.m >= 2 {
+		fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+	}
+
 }
 
 func (s *state) zero(t *types.Type, dst *ssa.Value) {
@@ -1094,6 +1139,10 @@ func (s *state) zero(t *types.Type, dst *ssa.Value) {
 	store := s.newValue2I(ssa.OpZero, types.TypeMem, t.Size(), dst, s.mem())
 	store.Aux = t
 	s.vars[&memVar] = store
+	if Debug.m >= 2 {
+		fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+	}
+
 }
 
 func (s *state) move(t *types.Type, dst, src *ssa.Value) {
@@ -1101,12 +1150,22 @@ func (s *state) move(t *types.Type, dst, src *ssa.Value) {
 	store := s.newValue3I(ssa.OpMove, types.TypeMem, t.Size(), dst, src, s.mem())
 	store.Aux = t
 	s.vars[&memVar] = store
+	if Debug.m >= 2 {
+		fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+	}
+
 }
 
 // stmtList converts the statement list n to SSA and adds it to s.
 func (s *state) stmtList(l Nodes) {
 	for _, n := range l.Slice() {
 		s.stmt(n)
+		if Debug.m >= 2 {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] n: %+v\n", file, line, n)
+			fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+		}
+
 	}
 }
 
@@ -1568,6 +1627,10 @@ func (s *state) stmt(n *Node) {
 	case OVARDEF:
 		if !s.canSSA(n.Left) {
 			s.vars[&memVar] = s.newValue1Apos(ssa.OpVarDef, types.TypeMem, n.Left, s.mem(), false)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
+
 		}
 	case OVARKILL:
 		// Insert a varkill op to record that a variable is no longer live.
@@ -1576,6 +1639,10 @@ func (s *state) stmt(n *Node) {
 		// with respect to call ops.
 		if !s.canSSA(n.Left) {
 			s.vars[&memVar] = s.newValue1Apos(ssa.OpVarKill, types.TypeMem, n.Left, s.mem(), false)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
+
 		}
 
 	case OVARLIVE:
@@ -1589,6 +1656,9 @@ func (s *state) stmt(n *Node) {
 			s.Fatalf("VARLIVE variable %v must be Auto or Arg", n.Left)
 		}
 		s.vars[&memVar] = s.newValue1A(ssa.OpVarLive, types.TypeMem, n.Left, s.mem())
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 
 	case OCHECKNIL:
 		p := s.expr(n.Left)
@@ -1626,23 +1696,60 @@ func (s *state) exit() *ssa.Block {
 		}
 	}
 
+	if Debug.m >= 2 {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+	}
+
+	if Debug.m >= 2 {
+		fmt.Printf("func exit:%+v\n", s.curfn.Func.Exit)
+	}
+
+	if Debug.m >= 2 {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+	}
+
 	// Run exit code. Typically, this code copies heap-allocated PPARAMOUT
 	// variables back to the stack.
 	s.stmtList(s.curfn.Func.Exit)
 
+	if Debug.m >= 2 {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+	}
+
 	// Store SSAable PPARAMOUT variables back to stack locations.
 	for _, n := range s.returns {
+		if Debug.m >= 2 {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+		}
+
 		addr := s.decladdrs[n]
 		val := s.variable(n, n.Type)
 		s.vars[&memVar] = s.newValue1A(ssa.OpVarDef, types.TypeMem, n, s.mem())
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
+
 		s.store(n.Type, addr, val)
 		// TODO: if val is ever spilled, we'd like to use the
 		// PPARAMOUT slot for spilling it. That won't happen
 		// currently.
+		if Debug.m >= 2 {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+		}
+
 	}
 
 	// Do actual return.
 	m := s.mem()
+	if Debug.m >= 2 {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+	}
 	b := s.endBlock()
 	b.Kind = ssa.BlockRet
 	b.SetControl(m)
@@ -2923,6 +3030,10 @@ func (s *state) append(n *Node, inplace bool) *ssa.Value {
 		if sn.Op == ONAME && sn.Class() != PEXTERN {
 			// Tell liveness we're about to build a new slice
 			s.vars[&memVar] = s.newValue1A(ssa.OpVarDef, types.TypeMem, sn, s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
+
 		}
 		capaddr := s.newValue1I(ssa.OpOffPtr, s.f.Config.Types.IntPtr, sliceCapOffset, addr)
 		s.store(types.Types[TINT], capaddr, r[2])
@@ -3129,6 +3240,10 @@ func (s *state) assign(left *Node, right *ssa.Value, deref bool, skip skipMask) 
 	// OpVarDef so liveness analysis knows the variable is redefined.
 	if base := clobberBase(left); base.Op == ONAME && base.Class() != PEXTERN && skip == 0 {
 		s.vars[&memVar] = s.newValue1Apos(ssa.OpVarDef, types.TypeMem, base, s.mem(), !base.IsAutoTmp())
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
+
 	}
 
 	// Left is not ssa-able. Compute its address.
@@ -3387,6 +3502,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			data := s.newValue1(ssa.OpIData, s.f.Config.Types.BytePtr, args[0])
 			s.vars[&memVar] = s.newValue2(ssa.OpKeepAlive, types.TypeMem, data, s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		all...)
@@ -3435,6 +3553,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue2(ssa.OpAtomicLoad32, types.NewTuple(types.Types[TUINT32], types.TypeMem), args[0], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TUINT32], v)
 		},
 		sys.AMD64, sys.ARM64, sys.MIPS, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
@@ -3442,6 +3563,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue2(ssa.OpAtomicLoad8, types.NewTuple(types.Types[TUINT8], types.TypeMem), args[0], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TUINT8], v)
 		},
 		sys.AMD64, sys.ARM64, sys.MIPS, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
@@ -3449,6 +3573,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue2(ssa.OpAtomicLoad64, types.NewTuple(types.Types[TUINT64], types.TypeMem), args[0], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TUINT64], v)
 		},
 		sys.AMD64, sys.ARM64, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
@@ -3456,6 +3583,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue2(ssa.OpAtomicLoadAcq32, types.NewTuple(types.Types[TUINT32], types.TypeMem), args[0], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TUINT32], v)
 		},
 		sys.PPC64, sys.S390X)
@@ -3463,6 +3593,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue2(ssa.OpAtomicLoadAcq64, types.NewTuple(types.Types[TUINT64], types.TypeMem), args[0], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TUINT64], v)
 		},
 		sys.PPC64)
@@ -3470,6 +3603,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue2(ssa.OpAtomicLoadPtr, types.NewTuple(s.f.Config.Types.BytePtr, types.TypeMem), args[0], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, s.f.Config.Types.BytePtr, v)
 		},
 		sys.AMD64, sys.ARM64, sys.MIPS, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
@@ -3477,36 +3613,54 @@ func init() {
 	addF("runtime/internal/atomic", "Store",
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			s.vars[&memVar] = s.newValue3(ssa.OpAtomicStore32, types.TypeMem, args[0], args[1], s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		sys.AMD64, sys.ARM64, sys.MIPS, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
 	addF("runtime/internal/atomic", "Store8",
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			s.vars[&memVar] = s.newValue3(ssa.OpAtomicStore8, types.TypeMem, args[0], args[1], s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		sys.AMD64, sys.ARM64, sys.MIPS, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
 	addF("runtime/internal/atomic", "Store64",
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			s.vars[&memVar] = s.newValue3(ssa.OpAtomicStore64, types.TypeMem, args[0], args[1], s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		sys.AMD64, sys.ARM64, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
 	addF("runtime/internal/atomic", "StorepNoWB",
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			s.vars[&memVar] = s.newValue3(ssa.OpAtomicStorePtrNoWB, types.TypeMem, args[0], args[1], s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		sys.AMD64, sys.ARM64, sys.MIPS, sys.MIPS64, sys.RISCV64, sys.S390X)
 	addF("runtime/internal/atomic", "StoreRel",
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			s.vars[&memVar] = s.newValue3(ssa.OpAtomicStoreRel32, types.TypeMem, args[0], args[1], s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		sys.PPC64, sys.S390X)
 	addF("runtime/internal/atomic", "StoreRel64",
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			s.vars[&memVar] = s.newValue3(ssa.OpAtomicStoreRel64, types.TypeMem, args[0], args[1], s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		sys.PPC64)
@@ -3515,6 +3669,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue3(ssa.OpAtomicExchange32, types.NewTuple(types.Types[TUINT32], types.TypeMem), args[0], args[1], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TUINT32], v)
 		},
 		sys.AMD64, sys.MIPS, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
@@ -3522,6 +3679,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue3(ssa.OpAtomicExchange64, types.NewTuple(types.Types[TUINT64], types.TypeMem), args[0], args[1], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TUINT64], v)
 		},
 		sys.AMD64, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
@@ -3567,6 +3727,9 @@ func init() {
 	atomicXchgXaddEmitterARM64 := func(s *state, n *Node, args []*ssa.Value, op ssa.Op, typ types.EType) {
 		v := s.newValue3(op, types.NewTuple(types.Types[typ], types.TypeMem), args[0], args[1], s.mem())
 		s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 		s.vars[n] = s.newValue1(ssa.OpSelect0, types.Types[typ], v)
 	}
 	addF("runtime/internal/atomic", "Xchg",
@@ -3580,6 +3743,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue3(ssa.OpAtomicAdd32, types.NewTuple(types.Types[TUINT32], types.TypeMem), args[0], args[1], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TUINT32], v)
 		},
 		sys.AMD64, sys.MIPS, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
@@ -3587,6 +3753,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue3(ssa.OpAtomicAdd64, types.NewTuple(types.Types[TUINT64], types.TypeMem), args[0], args[1], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TUINT64], v)
 		},
 		sys.AMD64, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
@@ -3602,6 +3771,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue4(ssa.OpAtomicCompareAndSwap32, types.NewTuple(types.Types[TBOOL], types.TypeMem), args[0], args[1], args[2], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TBOOL], v)
 		},
 		sys.AMD64, sys.MIPS, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
@@ -3609,6 +3781,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue4(ssa.OpAtomicCompareAndSwap64, types.NewTuple(types.Types[TBOOL], types.TypeMem), args[0], args[1], args[2], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TBOOL], v)
 		},
 		sys.AMD64, sys.MIPS64, sys.PPC64, sys.RISCV64, sys.S390X)
@@ -3616,6 +3791,9 @@ func init() {
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			v := s.newValue4(ssa.OpAtomicCompareAndSwap32, types.NewTuple(types.Types[TBOOL], types.TypeMem), args[0], args[1], args[2], s.mem())
 			s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return s.newValue1(ssa.OpSelect0, types.Types[TBOOL], v)
 		},
 		sys.PPC64)
@@ -3623,6 +3801,9 @@ func init() {
 	atomicCasEmitterARM64 := func(s *state, n *Node, args []*ssa.Value, op ssa.Op, typ types.EType) {
 		v := s.newValue4(op, types.NewTuple(types.Types[TBOOL], types.TypeMem), args[0], args[1], args[2], s.mem())
 		s.vars[&memVar] = s.newValue1(ssa.OpSelect1, types.TypeMem, v)
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 		s.vars[n] = s.newValue1(ssa.OpSelect0, types.Types[typ], v)
 	}
 
@@ -3636,30 +3817,45 @@ func init() {
 	addF("runtime/internal/atomic", "And8",
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			s.vars[&memVar] = s.newValue3(ssa.OpAtomicAnd8, types.TypeMem, args[0], args[1], s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		sys.AMD64, sys.MIPS, sys.PPC64, sys.S390X)
 	addF("runtime/internal/atomic", "And",
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			s.vars[&memVar] = s.newValue3(ssa.OpAtomicAnd32, types.TypeMem, args[0], args[1], s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		sys.AMD64, sys.MIPS, sys.PPC64, sys.S390X)
 	addF("runtime/internal/atomic", "Or8",
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			s.vars[&memVar] = s.newValue3(ssa.OpAtomicOr8, types.TypeMem, args[0], args[1], s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		sys.AMD64, sys.ARM64, sys.MIPS, sys.PPC64, sys.S390X)
 	addF("runtime/internal/atomic", "Or",
 		func(s *state, n *Node, args []*ssa.Value) *ssa.Value {
 			s.vars[&memVar] = s.newValue3(ssa.OpAtomicOr32, types.TypeMem, args[0], args[1], s.mem())
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 			return nil
 		},
 		sys.AMD64, sys.MIPS, sys.PPC64, sys.S390X)
 
 	atomicAndOrEmitterARM64 := func(s *state, n *Node, args []*ssa.Value, op ssa.Op, typ types.EType) {
 		s.vars[&memVar] = s.newValue3(op, types.TypeMem, args[0], args[1], s.mem())
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 	}
 
 	addF("runtime/internal/atomic", "And8",
@@ -4359,14 +4555,29 @@ func (s *state) openDeferSave(n *Node, t *types.Type, val *ssa.Value) *ssa.Value
 		// defer exit code (which will actually access it only if the
 		// associated defer call has been activated).
 		s.defvars[s.f.Entry.ID][&memVar] = s.entryNewValue1A(ssa.OpVarDef, types.TypeMem, argTemp, s.defvars[s.f.Entry.ID][&memVar])
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 		s.defvars[s.f.Entry.ID][&memVar] = s.entryNewValue1A(ssa.OpVarLive, types.TypeMem, argTemp, s.defvars[s.f.Entry.ID][&memVar])
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 		addrArgTemp = s.entryNewValue2A(ssa.OpLocalAddr, types.NewPtr(argTemp.Type), argTemp, s.sp, s.defvars[s.f.Entry.ID][&memVar])
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 	} else {
 		// Special case if we're still in the entry block. We can't use
 		// the above code, since s.defvars[s.f.Entry.ID] isn't defined
 		// until we end the entry block with s.endBlock().
 		s.vars[&memVar] = s.newValue1Apos(ssa.OpVarDef, types.TypeMem, argTemp, s.mem(), false)
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 		s.vars[&memVar] = s.newValue1Apos(ssa.OpVarLive, types.TypeMem, argTemp, s.mem(), false)
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 		addrArgTemp = s.newValue2Apos(ssa.OpLocalAddr, types.NewPtr(argTemp.Type), argTemp, s.sp, s.mem(), false)
 	}
 	if t.HasPointers() {
@@ -4498,8 +4709,14 @@ func (s *state) openDeferExit() {
 		call.AuxInt = stksize
 		if testLateExpansion {
 			s.vars[&memVar] = s.newValue1I(ssa.OpSelectN, types.TypeMem, int64(len(ACResults)), call)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 		} else {
 			s.vars[&memVar] = call
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 		}
 		// Make sure that the stack slots with pointers are kept live
 		// through the call (which is a pre-emption point). Also, we will
@@ -4507,15 +4724,24 @@ func (s *state) openDeferExit() {
 		// for the deferreturn, so we want all stack slots to be live.
 		if r.closureNode != nil {
 			s.vars[&memVar] = s.newValue1Apos(ssa.OpVarLive, types.TypeMem, r.closureNode, s.mem(), false)
+			if Debug.m >= 2 {
+				fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+			}
 		}
 		if r.rcvrNode != nil {
 			if r.rcvrNode.Type.HasPointers() {
 				s.vars[&memVar] = s.newValue1Apos(ssa.OpVarLive, types.TypeMem, r.rcvrNode, s.mem(), false)
+				if Debug.m >= 2 {
+					fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+				}
 			}
 		}
 		for _, argNode := range r.argNodes {
 			if argNode.Type.HasPointers() {
 				s.vars[&memVar] = s.newValue1Apos(ssa.OpVarLive, types.TypeMem, argNode, s.mem(), false)
+				if Debug.m >= 2 {
+					fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+				}
 			}
 		}
 
@@ -4609,6 +4835,9 @@ func (s *state) call(n *Node, k callKind, returnResultAddr bool) *ssa.Value {
 		d := tempAt(n.Pos, s.curfn, t)
 
 		s.vars[&memVar] = s.newValue1A(ssa.OpVarDef, types.TypeMem, d, s.mem())
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 		addr := s.addr(d)
 
 		// Must match reflect.go:deferstruct and src/runtime/runtime2.go:_defer.
@@ -4784,8 +5013,14 @@ func (s *state) call(n *Node, k callKind, returnResultAddr bool) *ssa.Value {
 	if testLateExpansion {
 		s.prevCall = call
 		s.vars[&memVar] = s.newValue1I(ssa.OpSelectN, types.TypeMem, int64(len(ACResults)), call)
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 	} else {
 		s.vars[&memVar] = call
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 	}
 	// Insert OVARLIVE nodes
 	s.stmtList(n.Nbody)
@@ -5259,9 +5494,15 @@ func (s *state) rtcall(fn *obj.LSym, returns bool, results []*types.Type, args .
 		call = s.newValue0A(ssa.OpStaticLECall, aux.LateExpansionResultType(), aux)
 		call.AddArgs(callArgs...)
 		s.vars[&memVar] = s.newValue1I(ssa.OpSelectN, types.TypeMem, int64(len(ACResults)), call)
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 	} else {
 		call = s.newValue1A(ssa.OpStaticCall, types.TypeMem, aux, s.mem())
 		s.vars[&memVar] = call
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 	}
 
 	if !returns {
@@ -5312,6 +5553,9 @@ func (s *state) storeType(t *types.Type, left, right *ssa.Value, skip skipMask, 
 	if skip == 0 && (!t.HasPointers() || ssa.IsStackAddr(left)) {
 		// Known to not have write barrier. Store the whole type.
 		s.vars[&memVar] = s.newValue3Apos(ssa.OpStore, types.TypeMem, t, left, right, s.mem(), leftIsStmt)
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 		return
 	}
 
@@ -5997,6 +6241,9 @@ func (s *state) dottype(n *Node, commaok bool) (res, resok *ssa.Value) {
 		// TODO: get rid of some of these temporaries.
 		tmp = tempAt(n.Pos, s.curfn, n.Type)
 		s.vars[&memVar] = s.newValue1A(ssa.OpVarDef, types.TypeMem, tmp, s.mem())
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 		addr = s.addr(tmp)
 	}
 
@@ -6073,6 +6320,9 @@ func (s *state) dottype(n *Node, commaok bool) (res, resok *ssa.Value) {
 	} else {
 		res = s.load(n.Type, addr)
 		s.vars[&memVar] = s.newValue1A(ssa.OpVarKill, types.TypeMem, tmp, s.mem())
+		if Debug.m >= 2 {
+			fmt.Printf("assign &memVar:%+v\n", s.vars[&memVar])
+		}
 	}
 	resok = s.variable(&okVar, types.Types[TBOOL])
 	delete(s.vars, &okVar)
@@ -6103,6 +6353,10 @@ func (s *state) variable(name *Node, t *types.Type) *ssa.Value {
 }
 
 func (s *state) mem() *ssa.Value {
+	if Debug.m >= 2 {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] mem:%+v\n", file, line, s.variable(&memVar, types.TypeMem))
+	}
 	return s.variable(&memVar, types.TypeMem)
 }
 
