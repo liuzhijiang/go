@@ -121,6 +121,8 @@ import (
 	"fmt"
 	"math/bits"
 	"unsafe"
+
+	"runtime"
 )
 
 const (
@@ -899,6 +901,10 @@ func (s *regAllocState) regalloc(f *Func) {
 			}
 		}
 		for i := len(b.Values) - 1; i >= 0; i-- {
+			if isDebug(f.Name) {
+				fmt.Printf("process value:%s\n", b.Values[i])
+			}
+
 			v := b.Values[i]
 			regValLiveSet.remove(v.ID)
 			if v.Op == OpPhi {
@@ -918,6 +924,9 @@ func (s *regAllocState) regalloc(f *Func) {
 				}
 			}
 			for _, a := range v.Args {
+				if isDebug(f.Name) {
+					fmt.Printf("a:%s, needReg:%v\n", a, s.values[a.ID].needReg)
+				}
 				if !s.values[a.ID].needReg {
 					continue
 				}
@@ -925,6 +934,19 @@ func (s *regAllocState) regalloc(f *Func) {
 				regValLiveSet.add(a.ID)
 			}
 		}
+		if isDebug(f.Name) {
+			fmt.Printf("value info:\n")
+			for _, id := range regValLiveSet.contents() {
+				fmt.Printf("reg value:%d, use:[", id)
+				var use = s.values[id].uses
+				for use != nil {
+					fmt.Printf("dist:%d,", use.dist)
+					use = use.next
+				}
+				fmt.Printf("]\n")
+			}
+		}
+
 		if s.f.pass.debug > regDebug {
 			fmt.Printf("use distances for %s\n", b)
 			for i := range s.values {
@@ -1041,6 +1063,11 @@ func (s *regAllocState) regalloc(f *Func) {
 				// Some instructions target not-allocatable registers.
 				// They're not suitable for further (phi-function) allocation.
 				m := s.values[a.ID].regs &^ phiUsed & s.allocatable
+				if isDebug(f.Name) {
+					fmt.Printf("regs:%v, phiUsed:%v, allocatable:%v, m:%v\n",
+						s.values[a.ID].regs, phiUsed, s.allocatable, m)
+				}
+
 				if m != 0 {
 					r := pickReg(m)
 					phiUsed |= regMask(1) << r
@@ -1058,13 +1085,17 @@ func (s *regAllocState) regalloc(f *Func) {
 
 			// Second pass - deallocate all in-register phi inputs.
 			for i, v := range phis {
+				if isDebug(f.Name) {
+					fmt.Printf("v:%s, need reg:%v\n",
+						v, s.values[v.ID].needReg)
+				}
 				if !s.values[v.ID].needReg {
 					continue
 				}
 				a := v.Args[idx]
 				r := phiRegs[i]
 				if isDebug(f.Name) {
-					fmt.Printf("process phis value:%s, r:%s, contains:%v\n", v, r, regValLiveSet.contains(a.ID))
+					fmt.Printf("process phis value:%s, r:%v, contains:%v\n", v, r, regValLiveSet.contains(a.ID))
 				}
 
 				if r == noRegister {
@@ -1382,6 +1413,10 @@ func (s *regAllocState) regalloc(f *Func) {
 			}
 
 			if s.values[v.ID].rematerializeable {
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
 				// Value is rematerializeable, don't issue it here.
 				// It will get issued just before each use (see
 				// allocValueToReg).
@@ -1462,6 +1497,11 @@ func (s *regAllocState) regalloc(f *Func) {
 			// at least two copies of the input register so we don't
 			// have to reload the value from the spill location.
 			if opcodeTable[v.Op].resultInArg0 {
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
+
 				var m regMask
 				if !s.liveAfterCurrentInstruction(v.Args[0]) {
 					// arg0 is dead.  We can clobber its register.
@@ -1557,13 +1597,23 @@ func (s *regAllocState) regalloc(f *Func) {
 			// Dump any registers which will be clobbered
 			s.freeRegs(regspec.clobbers)
 			s.tmpused |= regspec.clobbers
+			if isDebug(f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v]\n", file, line)
+			}
 
 			// Pick registers for outputs.
 			{
 				outRegs := [2]register{noRegister, noRegister}
 				var used regMask
 				for _, out := range regspec.outputs {
+
 					mask := out.regs & s.allocatable &^ used
+					if isDebug(f.Name) {
+						fmt.Printf("regs:%v, allocatable:%v, used:%v, mask:%v\n",
+							out.regs, s.allocatable, used, mask)
+					}
+
 					if mask == 0 {
 						continue
 					}
@@ -1619,10 +1669,19 @@ func (s *regAllocState) regalloc(f *Func) {
 					if r := outRegs[1]; r != noRegister {
 						outLocs[1] = &s.registers[r]
 					}
+					if isDebug(f.Name) {
+						fmt.Printf("set home\n")
+					}
 					s.f.setHome(v, outLocs)
 					// Note that subsequent SelectX instructions will do the assignReg calls.
 				} else {
+					if isDebug(f.Name) {
+						fmt.Printf("value:%s, assign reg. register:%v\n", v, outRegs[0])
+					}
 					if r := outRegs[0]; r != noRegister {
+						if isDebug(f.Name) {
+							fmt.Printf("assign reg. r:%v, v:%s\n", r, v)
+						}
 						s.assignReg(r, v, v)
 					}
 				}
