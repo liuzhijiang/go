@@ -1003,6 +1003,9 @@ func (s *regAllocState) regalloc(f *Func) {
 				f.Fatalf("block with no primary predecessor %s", b)
 			}
 			p := b.Preds[idx].b
+			if isDebug(f.Name) {
+				fmt.Printf("primary block:%s\n", p)
+			}
 			s.setState(s.endRegs[p.ID])
 
 			if s.f.pass.debug > regDebug {
@@ -1031,6 +1034,9 @@ func (s *regAllocState) regalloc(f *Func) {
 					phiRegs = append(phiRegs, noRegister)
 					continue
 				}
+				if isDebug(f.Name) {
+					fmt.Printf("process phis value:%s\n", v)
+				}
 				a := v.Args[idx]
 				// Some instructions target not-allocatable registers.
 				// They're not suitable for further (phi-function) allocation.
@@ -1039,8 +1045,14 @@ func (s *regAllocState) regalloc(f *Func) {
 					r := pickReg(m)
 					phiUsed |= regMask(1) << r
 					phiRegs = append(phiRegs, r)
+					if isDebug(f.Name) {
+						fmt.Printf("add phi regs:%v\n", r)
+					}
 				} else {
 					phiRegs = append(phiRegs, noRegister)
+					if isDebug(f.Name) {
+						fmt.Printf("add phi regs:%v\n", noRegister)
+					}
 				}
 			}
 
@@ -1051,9 +1063,14 @@ func (s *regAllocState) regalloc(f *Func) {
 				}
 				a := v.Args[idx]
 				r := phiRegs[i]
+				if isDebug(f.Name) {
+					fmt.Printf("process phis value:%s, r:%s, contains:%v\n", v, r, regValLiveSet.contains(a.ID))
+				}
+
 				if r == noRegister {
 					continue
 				}
+
 				if regValLiveSet.contains(a.ID) {
 					// Input value is still live (it is used by something other than Phi).
 					// Try to move it around before kicking out, if there is a free register.
@@ -1313,6 +1330,9 @@ func (s *regAllocState) regalloc(f *Func) {
 				goto issueSpill
 			}
 			if v.Op == OpArg {
+				if isDebug(f.Name) {
+					fmt.Printf("value op:%v\n", v.Op)
+				}
 				// Args are "pre-spilled" values. We don't allocate
 				// any register here. We just set up the spill pointer to
 				// point at itself and any later user will restore it to use it.
@@ -1348,6 +1368,11 @@ func (s *regAllocState) regalloc(f *Func) {
 				b.Values = append(b.Values, v)
 				continue
 			}
+			if isDebug(f.Name) {
+				fmt.Printf("regspec.inputs len:%d, regspec.outputs len:%d\n",
+					len(regspec.inputs), len(regspec.outputs))
+			}
+
 			if len(regspec.inputs) == 0 && len(regspec.outputs) == 0 {
 				// No register allocation required (or none specified yet)
 				s.freeRegs(regspec.clobbers)
