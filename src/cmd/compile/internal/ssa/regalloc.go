@@ -2262,10 +2262,10 @@ func (s *regAllocState) regalloc(f *Func) {
 	if isDebug(f.Name) {
 		for _, b := range s.visitOrder {
 			_, file, line, _ := runtime.Caller(0)
-			fmt.printf("[%v:%v] b:%s\n", b)
+			fmt.Printf("[%v:%v] b:%s\n", b)
 			for _, v := range b.Values {
 				_, file, line, _ := runtime.Caller(0)
-				fmt.printf("[%v:%v] v:%s\n", v.LongString())
+				fmt.Printf("[%v:%v] v:%s\n", v.LongString())
 			}
 		}
 	}
@@ -2275,10 +2275,10 @@ func (s *regAllocState) regalloc(f *Func) {
 	if isDebug(f.Name) {
 		for _, b := range s.visitOrder {
 			_, file, line, _ := runtime.Caller(0)
-			fmt.printf("[%v:%v] b:%s\n", b)
+			fmt.Printf("[%v:%v] b:%s\n", b)
 			for _, v := range b.Values {
 				_, file, line, _ := runtime.Caller(0)
-				fmt.printf("[%v:%v] v:%s\n", v.LongString())
+				fmt.Printf("[%v:%v] v:%s\n", v.LongString())
 			}
 		}
 	}
