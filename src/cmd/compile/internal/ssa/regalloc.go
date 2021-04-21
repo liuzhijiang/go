@@ -2594,6 +2594,18 @@ func (e *edgeState) setup(idx int, srcReg []endReg, dstReg []startReg, stacklive
 		fmt.Printf("edge %s->%s\n", e.p, e.b)
 	}
 
+	if isDebug(s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] srcReg:%v, dstReg:%v, stacklive:%v\n", file, line, srcReg, dstReg, stacklive)
+		for _, v := range srcReg {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] endReg:%+v\n", file, line, v)
+		}
+		for _, v := range dstReg {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] dstReg:%+v\n", file, line, v)
+		}
+	}
 	// Clear state.
 	for _, vid := range e.cachedVals {
 		delete(e.cache, vid)
@@ -2634,6 +2646,10 @@ func (e *edgeState) setup(idx int, srcReg []endReg, dstReg []startReg, stacklive
 	for _, x := range dstReg {
 		dsts = append(dsts, dstRecord{&e.s.registers[x.r], x.v.ID, nil, x.pos})
 	}
+	if isDebug(s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] dst:%+v\n", dsts)
+	}
 	// Phis need their args to end up in a specific location.
 	for _, v := range e.b.Values {
 		if v.Op != OpPhi {
@@ -2645,6 +2661,11 @@ func (e *edgeState) setup(idx int, srcReg []endReg, dstReg []startReg, stacklive
 		}
 		dsts = append(dsts, dstRecord{loc, v.Args[idx].ID, &v.Args[idx], v.Pos})
 	}
+	if isDebug(s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] dst:%+v\n", dsts)
+	}
+
 	e.destinations = dsts
 
 	if e.s.f.pass.debug > regDebug {
