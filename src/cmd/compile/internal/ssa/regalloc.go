@@ -1446,6 +1446,12 @@ func (s *regAllocState) regalloc(f *Func) {
 			// Process phi ops in succ.
 			pidx := e.i
 			for _, v := range succ.Values {
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] v:%s, v.op:%v, need reg:%v\n", file, line,
+						v, v.Op, s.values[v.ID].needReg)
+				}
+
 				if v.Op != OpPhi {
 					break
 				}
