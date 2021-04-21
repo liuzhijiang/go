@@ -1069,7 +1069,15 @@ func (s *regAllocState) regalloc(f *Func) {
 				}
 
 				if m != 0 {
+					if isDebug(f.Name) {
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] m:%v\n", file, line, m)
+					}
 					r := pickReg(m)
+					if isDebug(f.Name) {
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] r:%v\n", file, line, r)
+					}
 					phiUsed |= regMask(1) << r
 					phiRegs = append(phiRegs, r)
 					if isDebug(f.Name) {
@@ -1461,7 +1469,7 @@ func (s *regAllocState) regalloc(f *Func) {
 			if s.values[v.ID].rematerializeable {
 				if isDebug(f.Name) {
 					_, file, line, _ := runtime.Caller(0)
-					fmt.Printf("[%v:%v]\n", file, line)
+					fmt.Printf("[%v:%v] v:%s, regs:%v\n", file, line, v, s.values[v.ID].regs)
 				}
 				// Value is rematerializeable, don't issue it here.
 				// It will get issued just before each use (see
