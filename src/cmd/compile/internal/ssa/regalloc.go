@@ -1412,6 +1412,16 @@ func (s *regAllocState) regalloc(f *Func) {
 		// Load static desired register info at the end of the block.
 		desired.copy(&s.desired[b.ID])
 
+		if isDebug(f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] desired\n", file, line)
+			for i := range desired.entries {
+				fmt.Printf("[%v:%v] key:%v, registers:%v\n",
+					file, line,
+					desired.entries[i].ID,
+					desired.entries[i].regs)
+			}
+		}
 		// Check actual assigned registers at the start of the next block(s).
 		// Dynamically assigned registers will trump the static
 		// desired registers computed during liveness analysis.
@@ -1480,6 +1490,16 @@ func (s *regAllocState) regalloc(f *Func) {
 			}
 		}
 
+		if isDebug(f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] desired\n", file, line)
+			for i := range desired.entries {
+				fmt.Printf("[%v:%v] key:%v, registers:%v\n",
+					file, line,
+					desired.entries[i].ID,
+					desired.entries[i].regs)
+			}
+		}
 		if isDebug(f.Name) {
 			_, file, line, _ := runtime.Caller(0)
 			fmt.Printf("[%v:%v] after compute\n", file, line)
