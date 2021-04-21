@@ -1899,14 +1899,32 @@ func (s *regAllocState) regalloc(f *Func) {
 						continue
 					}
 					if opcodeTable[v.Op].resultInArg0 && out.idx == 0 {
+						if isDebug(f.Name) {
+							_, file, line, _ := runtime.Caller(0)
+							fmt.Printf("[%v:%v] resultInArg0:%v, out.idx:%v\n", file, line,
+								opcodeTable[v.Op].resultInArg0, out.idx)
+						}
+
 						if !opcodeTable[v.Op].commutative {
 							// Output must use the same register as input 0.
 							r := register(s.f.getHome(args[0].ID).(*Register).num)
 							mask = regMask(1) << r
+							if isDebug(f.Name) {
+								_, file, line, _ := runtime.Caller(0)
+								fmt.Printf("[%v:%v] r:%v, mask:%v\n", file, line,
+									r, mask)
+							}
+
 						} else {
 							// Output must use the same register as input 0 or 1.
 							r0 := register(s.f.getHome(args[0].ID).(*Register).num)
 							r1 := register(s.f.getHome(args[1].ID).(*Register).num)
+							if isDebug(f.Name) {
+								_, file, line, _ := runtime.Caller(0)
+								fmt.Printf("[%v:%v] r0:%v, r1:%v\n", file, line,
+									r0, r1)
+							}
+
 							// Check r0 and r1 for desired output register.
 							found := false
 							for _, r := range dinfo[idx].out {
