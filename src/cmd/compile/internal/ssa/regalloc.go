@@ -2992,7 +2992,7 @@ func (s *regAllocState) computeLive() {
 	}
 	if isDebug(f.Name) {
 		_, file, line, _ := runtime.Caller(0)
-		fmt.Printfln("[%v:%v] live values at end of each block", file, line)
+		fmt.Printf("[%v:%v] live values at end of each block\n", file, line)
 		for _, b := range f.Blocks {
 			fmt.Printf("[%v:%v]   %s:", file, line, b)
 			for _, x := range s.live[b.ID] {
