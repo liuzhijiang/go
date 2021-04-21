@@ -2648,7 +2648,7 @@ func (e *edgeState) setup(idx int, srcReg []endReg, dstReg []startReg, stacklive
 	}
 	if isDebug(e.s.f.Name) {
 		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] dst:%+v\n", dsts)
+		fmt.Printf("[%v:%v] dst:%+v\n", file, line, dsts)
 	}
 	// Phis need their args to end up in a specific location.
 	for _, v := range e.b.Values {
@@ -2663,7 +2663,7 @@ func (e *edgeState) setup(idx int, srcReg []endReg, dstReg []startReg, stacklive
 	}
 	if isDebug(e.s.f.Name) {
 		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] dst:%+v\n", dsts)
+		fmt.Printf("[%v:%v] dst:%+v\n", file, line, dsts)
 	}
 
 	e.destinations = dsts
