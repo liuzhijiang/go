@@ -1954,10 +1954,17 @@ func (s *regAllocState) regalloc(f *Func) {
 					if mask&^desired.avoid&^s.nospill != 0 {
 						mask &^= desired.avoid
 					}
+
 					r := s.allocReg(mask, v)
 					outRegs[out.idx] = r
 					used |= regMask(1) << r
 					s.tmpused |= regMask(1) << r
+					if isDebug(f.Name) {
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] mask:%v, v:%s, r:%v\n", file, line,
+							mask, v, r)
+					}
+
 				}
 				// Record register choices
 				if v.Type.IsTuple() {
