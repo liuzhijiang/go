@@ -1453,6 +1453,37 @@ func (s *regAllocState) regalloc(f *Func) {
 		}
 		// Walk values backwards computing desired register info.
 		// See computeLive for more comments.
+		if isDebug(f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] before compute\n", file, line)
+			for i := len(oldSched) - 1; i >= 0; i-- {
+				v := oldSched[i]
+
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] value %s\n", file, line, v.LongString())
+				fmt.Printf("[%v:%v]   out:", file, line)
+				for _, r := range dinfo[i].out {
+					if r != noRegister {
+						fmt.Printf(" %s", &s.registers[r])
+					}
+				}
+				fmt.Println()
+				for in_i := 0; in_i < len(v.Args) && in_i < 3; in_i++ {
+					fmt.Printf("[%v:%v]  in%d:", file, line, in_i)
+					for _, r := range dinfo[i].in[in_i] {
+						if r != noRegister {
+							fmt.Printf(" %s", &s.registers[r])
+						}
+					}
+					fmt.Println()
+				}
+			}
+		}
+
+		if isDebug(f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] after compute\n", file, line)
+		}
 		for i := len(oldSched) - 1; i >= 0; i-- {
 			v := oldSched[i]
 			prefs := desired.remove(v.ID)
@@ -1478,6 +1509,26 @@ func (s *regAllocState) regalloc(f *Func) {
 					break
 				}
 				dinfo[i].in[j] = desired.get(a.ID)
+			}
+			if isDebug(f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] value %s\n", file, line, v.LongString())
+				fmt.Printf("[%v:%v]   out:", file, line)
+				for _, r := range dinfo[i].out {
+					if r != noRegister {
+						fmt.Printf(" %s", &s.registers[r])
+					}
+				}
+				fmt.Println()
+				for in_i := 0; in_i < len(v.Args) && in_i < 3; in_i++ {
+					fmt.Printf("[%v:%v]  in%d:", file, line, in_i)
+					for _, r := range dinfo[i].in[in_i] {
+						if r != noRegister {
+							fmt.Printf(" %s", &s.registers[r])
+						}
+					}
+					fmt.Println()
+				}
 			}
 		}
 
