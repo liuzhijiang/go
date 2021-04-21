@@ -486,7 +486,7 @@ func (s *regAllocState) makeSpill(v *Value, b *Block) *Value {
 func (s *regAllocState) allocValToReg(v *Value, mask regMask, nospill bool, pos src.XPos) *Value {
 	if isDebug(s.f.Name) {
 		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+		fmt.Printf("[%v:%v] v:%s, mask:%v\n", file, line, v, mask)
 	}
 
 	if s.f.Config.ctxt.Arch.Arch == sys.ArchWasm && v.rematerializeable() {
@@ -515,7 +515,7 @@ func (s *regAllocState) allocValToReg(v *Value, mask regMask, nospill bool, pos 
 	if mask&vi.regs != 0 {
 		if isDebug(s.f.Name) {
 			_, file, line, _ := runtime.Caller(0)
-			fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+			fmt.Printf("[%v:%v] mask:%v, vi.regs:%v\n", file, line, mask, vi.regs)
 		}
 
 		r := pickReg(mask & vi.regs)
@@ -530,6 +530,11 @@ func (s *regAllocState) allocValToReg(v *Value, mask regMask, nospill bool, pos 
 		if nospill {
 			s.nospill |= regMask(1) << r
 		}
+		if isDebug(s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] r:%v, s.regs[%v].c:%v\n", file, line, r, r, s.regs[r].c)
+		}
+
 		return s.regs[r].c
 	}
 
@@ -1271,7 +1276,7 @@ func (s *regAllocState) regalloc(f *Func) {
 						if er.v == s.orig[v.Args[i].ID] {
 							if isDebug(f.Name) {
 								_, file, line, _ := runtime.Caller(0)
-								fmt.Printf("[%v:%v] er:%v, v.args[i].ID:%v, orig:%v\n",
+								fmt.Printf("[%v:%v] er:%v, v.args[%v].ID:%v, orig:%v\n",
 									file, line, er, i, v.Args[i].ID, s.orig[v.Args[i].ID])
 							}
 							ri = er.r
