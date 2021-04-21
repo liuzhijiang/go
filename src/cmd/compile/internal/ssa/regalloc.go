@@ -3006,6 +3006,11 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 		*splice = x
 		x.Uses++
 	}
+	if isDebug(e.s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] value:%v\n", file, line, **splice)
+	}
+
 	return true
 }
 

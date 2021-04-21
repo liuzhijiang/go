@@ -10,6 +10,8 @@ import (
 	"cmd/compile/internal/types"
 	"cmd/internal/src"
 	"fmt"
+
+	"runtime"
 )
 
 type stackAllocState struct {
@@ -360,6 +362,11 @@ func (f *Func) setHome(v *Value, loc Location) {
 	for v.ID >= ID(len(f.RegAlloc)) {
 		f.RegAlloc = append(f.RegAlloc, nil)
 	}
+	if isDebug(f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] v:%s, loc:%s\n", file, line, v, loc)
+	}
+
 	f.RegAlloc[v.ID] = loc
 }
 
