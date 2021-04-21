@@ -2683,17 +2683,42 @@ func (e *edgeState) setup(idx int, srcReg []endReg, dstReg []startReg, stacklive
 
 // process generates code to move all the values to the right destination locations.
 func (e *edgeState) process() {
+	if isDebug(e.s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v]\n", file, line)
+	}
+
 	dsts := e.destinations
 
 	// Process the destinations until they are all satisfied.
 	for len(dsts) > 0 {
 		i := 0
+		if isDebug(e.s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] dst len:%d\n", file, line, len(dsts))
+		}
+
 		for _, d := range dsts {
+			if isDebug(e.s.f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] d:%+v, loc:%s, id:%v\n", file, line, d, d.loc, d.vid)
+			}
+
 			if !e.processDest(d.loc, d.vid, d.splice, d.pos) {
+				if isDebug(e.s.f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
+
 				// Failed - save for next iteration.
 				dsts[i] = d
 				i++
 			}
+			if isDebug(e.s.f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v]\n", file, line)
+			}
+
 		}
 		if i < len(dsts) {
 			// Made some progress. Go around again.
