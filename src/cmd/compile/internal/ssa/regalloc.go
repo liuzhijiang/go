@@ -147,13 +147,15 @@ func regalloc(f *Func) {
 		fmt.Printf("func name:%s\n", f.Name)
 	}
 	if isDebug(f.Name) {
-		fmt.Printf("begin to regalloc for function:%s\n", f.Name)
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] begin to regalloc for function:%s\n", file, line, f.Name)
 	}
 	var s regAllocState
 	s.init(f)
 	s.regalloc(f)
 	if isDebug(f.Name) {
-		fmt.Printf("finish regalloc for function:%s\n", f.Name)
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] finish regalloc for function:%s\n", file, line, f.Name)
 	}
 
 }
@@ -679,11 +681,13 @@ func (s *regAllocState) init(f *Func) {
 	}
 
 	if isDebug(f.Name) {
-		fmt.Printf("begin to compute live\n")
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] begin to compute live\n", file, line)
 	}
 	s.computeLive()
 	if isDebug(f.Name) {
-		fmt.Printf("finish compute live\n")
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] finish compute live\n", file, line)
 	}
 
 	// Compute primary predecessors.
@@ -863,7 +867,8 @@ func (s *regAllocState) regalloc(f *Func) {
 			fmt.Printf("Begin processing block %v\n", b)
 		}
 		if isDebug(f.Name) {
-			fmt.Printf("Begin processing block %v\n", b)
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] Begin processing block %v\n", file, line, b)
 		}
 		s.curBlock = b
 
@@ -874,7 +879,8 @@ func (s *regAllocState) regalloc(f *Func) {
 			s.addUse(e.ID, int32(len(b.Values))+e.dist, e.pos) // pseudo-uses from beyond end of block
 			regValLiveSet.add(e.ID)
 			if isDebug(f.Name) {
-				fmt.Printf("live value:%d, dist:%d, value count:%d, dist:%d\n",
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] live value:%d, dist:%d, value count:%d, dist:%d\n", file, line,
 					e.ID, s.values[e.ID].uses.dist, len(b.Values), e.dist)
 			}
 		}
@@ -883,15 +889,17 @@ func (s *regAllocState) regalloc(f *Func) {
 				s.addUse(v.ID, int32(len(b.Values)), b.Pos) // pseudo-use by control values
 				regValLiveSet.add(v.ID)
 				if isDebug(f.Name) {
-					fmt.Printf("control value:%d, dist:%d, value count:%d\n",
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] control value:%d, dist:%d, value count:%d\n", file, line,
 						v.ID, s.values[v.ID].uses.dist, len(b.Values))
 				}
 			}
 		}
 		if isDebug(f.Name) {
-			fmt.Printf("value info:\n")
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] value info:\n", file, line)
 			for _, id := range regValLiveSet.contents() {
-				fmt.Printf("reg value:%d, use:[", id)
+				fmt.Printf("[%v:%v] reg value:%d, use:[", file, line, id)
 				var use = s.values[id].uses
 				for use != nil {
 					fmt.Printf("dist:%d,", use.dist)
@@ -902,7 +910,8 @@ func (s *regAllocState) regalloc(f *Func) {
 		}
 		for i := len(b.Values) - 1; i >= 0; i-- {
 			if isDebug(f.Name) {
-				fmt.Printf("process value:%s\n", b.Values[i])
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] process value:%s\n", file, line, b.Values[i])
 			}
 
 			v := b.Values[i]
@@ -925,7 +934,8 @@ func (s *regAllocState) regalloc(f *Func) {
 			}
 			for _, a := range v.Args {
 				if isDebug(f.Name) {
-					fmt.Printf("a:%s, needReg:%v\n", a, s.values[a.ID].needReg)
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] a:%s, needReg:%v\n", file, line, a, s.values[a.ID].needReg)
 				}
 				if !s.values[a.ID].needReg {
 					continue
@@ -935,9 +945,10 @@ func (s *regAllocState) regalloc(f *Func) {
 			}
 		}
 		if isDebug(f.Name) {
-			fmt.Printf("value info:\n")
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] value info:\n", file, line)
 			for _, id := range regValLiveSet.contents() {
-				fmt.Printf("reg value:%d, use:[", id)
+				fmt.Printf("[%v:%v] reg value:%d, use:[", file, line, id)
 				var use = s.values[id].uses
 				for use != nil {
 					fmt.Printf("dist:%d,", use.dist)
@@ -965,14 +976,15 @@ func (s *regAllocState) regalloc(f *Func) {
 		}
 
 		if isDebug(f.Name) {
-			fmt.Printf("use distances for %s\n", b)
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] use distances for %s\n", file, line, b)
 			for i := range s.values {
 				vi := &s.values[i]
 				u := vi.uses
 				if u == nil {
 					continue
 				}
-				fmt.Printf("  v%d:", i)
+				fmt.Printf("[%v:%v]  v%d:", file, line, i)
 				for u != nil {
 					fmt.Printf(" %d", u.dist)
 					u = u.next
@@ -1026,21 +1038,23 @@ func (s *regAllocState) regalloc(f *Func) {
 			}
 			p := b.Preds[idx].b
 			if isDebug(f.Name) {
-				fmt.Printf("primary block:%s\n", p)
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] primary block:%s\n", file, line, p)
 			}
 			s.setState(s.endRegs[p.ID])
 
 			if s.f.pass.debug > regDebug {
 				fmt.Printf("starting merge block %s with end state of %s:\n", b, p)
 				for _, x := range s.endRegs[p.ID] {
-					fmt.Printf("  %s: orig:%s cache:%s\n", &s.registers[x.r], x.v, x.c)
+					fmt.Printf("   %s: orig:%s cache:%s\n", &s.registers[x.r], x.v, x.c)
 				}
 			}
 
 			if isDebug(f.Name) {
-				fmt.Printf("starting merge block %s with end state of %s:\n", b, p)
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] starting merge block %s with end state of %s:\n", file, line, b, p)
 				for _, x := range s.endRegs[p.ID] {
-					fmt.Printf("  %s: orig:%s cache:%s\n", &s.registers[x.r], x.v, x.c)
+					fmt.Printf("[%v:%v]   %s: orig:%s cache:%s\n", file, line, &s.registers[x.r], x.v, x.c)
 				}
 			}
 
@@ -1057,14 +1071,16 @@ func (s *regAllocState) regalloc(f *Func) {
 					continue
 				}
 				if isDebug(f.Name) {
-					fmt.Printf("process phis value:%s\n", v)
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] process phis value:%s\n", file, line, v)
 				}
 				a := v.Args[idx]
 				// Some instructions target not-allocatable registers.
 				// They're not suitable for further (phi-function) allocation.
 				m := s.values[a.ID].regs &^ phiUsed & s.allocatable
 				if isDebug(f.Name) {
-					fmt.Printf("regs:%v, phiUsed:%v, allocatable:%v, m:%v\n",
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] regs:%v, phiUsed:%v, allocatable:%v, m:%v\n", file, line,
 						s.values[a.ID].regs, phiUsed, s.allocatable, m)
 				}
 
@@ -1081,12 +1097,14 @@ func (s *regAllocState) regalloc(f *Func) {
 					phiUsed |= regMask(1) << r
 					phiRegs = append(phiRegs, r)
 					if isDebug(f.Name) {
-						fmt.Printf("add phi regs:%v\n", r)
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] add phi regs:%v\n", file, line, r)
 					}
 				} else {
 					phiRegs = append(phiRegs, noRegister)
 					if isDebug(f.Name) {
-						fmt.Printf("add phi regs:%v\n", noRegister)
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] add phi regs:%v\n", file, line, noRegister)
 					}
 				}
 			}
@@ -1094,7 +1112,8 @@ func (s *regAllocState) regalloc(f *Func) {
 			// Second pass - deallocate all in-register phi inputs.
 			for i, v := range phis {
 				if isDebug(f.Name) {
-					fmt.Printf("v:%s, need reg:%v\n",
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] v:%s, need reg:%v\n", file, line,
 						v, s.values[v.ID].needReg)
 				}
 				if !s.values[v.ID].needReg {
@@ -1103,7 +1122,8 @@ func (s *regAllocState) regalloc(f *Func) {
 				a := v.Args[idx]
 				r := phiRegs[i]
 				if isDebug(f.Name) {
-					fmt.Printf("process phis value:%s, r:%v, contains:%v\n", v, r, regValLiveSet.contains(a.ID))
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] process phis value:%s, r:%v, contains:%v\n", file, line, v, r, regValLiveSet.contains(a.ID))
 				}
 
 				if r == noRegister {
@@ -1128,7 +1148,8 @@ func (s *regAllocState) regalloc(f *Func) {
 							fmt.Printf("copy %s to %s : %s\n", a, c, &s.registers[r2])
 						}
 						if isDebug(f.Name) {
-							fmt.Printf("copy %s to %s : %s\n", a, c, &s.registers[r2])
+							_, file, line, _ := runtime.Caller(0)
+							fmt.Printf("[%v:%v] copy %s to %s : %s\n", file, line, a, c, &s.registers[r2])
 						}
 						s.setOrig(c, a)
 						s.assignReg(r2, a, c)
@@ -1145,11 +1166,13 @@ func (s *regAllocState) regalloc(f *Func) {
 			// was not in a register in the primary predecessor.
 			for i, v := range phis {
 				if isDebug(f.Name) {
-					fmt.Printf("v:%s, need reg:%v\n",
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] v:%s, need reg:%v\n", file, line,
 						v, s.values[v.ID].needReg)
 				}
 				if isDebug(f.Name) {
-					fmt.Printf("process phis value:%s, r:%v\n", v, phiRegs[i])
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] process phis value:%s, r:%v\n", file, line, v, phiRegs[i])
 				}
 
 				if !s.values[v.ID].needReg {
@@ -1160,57 +1183,67 @@ func (s *regAllocState) regalloc(f *Func) {
 				}
 				m := s.compatRegs(v.Type) &^ phiUsed &^ s.used
 				if isDebug(f.Name) {
-					fmt.Printf("m:%v\n", m)
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] m:%v\n", file, line, m)
 				}
 				// If one of the other inputs of v is in a register, and the register is available,
 				// select this register, which can save some unnecessary copies.
 				for i, pe := range b.Preds {
 					if isDebug(f.Name) {
-						fmt.Printf("i:%d, idx:%d, pe:%v\n", i, idx, pe)
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] i:%d, idx:%d, pe:%v\n", file, line, i, idx, pe)
 					}
 					if int32(i) == idx {
 						continue
 					}
 					ri := noRegister
 					if isDebug(f.Name) {
-						fmt.Printf("ri:%v\n", ri)
-						fmt.Printf("pe.b:%v, len:%v\n", pe.b, len(s.endRegs[pe.b.ID]))
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] ri:%v\n", file, line, ri)
+						fmt.Printf("[%v:%v] pe.b:%v, len:%v\n", file, line, pe.b, len(s.endRegs[pe.b.ID]))
 					}
 					for _, er := range s.endRegs[pe.b.ID] {
 						if er.v == s.orig[v.Args[i].ID] {
 							if isDebug(f.Name) {
-								fmt.Printf("er:%v, v.args[i].ID:%v, orig:%v",
-									er, i, v.Args[i].ID, s.orig[v.Args[i].ID])
+								_, file, line, _ := runtime.Caller(0)
+								fmt.Printf("[%v:%v] er:%v, v.args[i].ID:%v, orig:%v\n",
+									file, line, er, i, v.Args[i].ID, s.orig[v.Args[i].ID])
 							}
 							ri = er.r
 							break
 						}
 					}
 					if isDebug(f.Name) {
-						fmt.Printf("ri:%v\n", ri)
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] ri:%v\n", file, line, ri)
 					}
 					if ri != noRegister && m>>ri&1 != 0 {
 						if isDebug(f.Name) {
-							fmt.Printf("ri:%v, m:%v\n", ri, m)
+							_, file, line, _ := runtime.Caller(0)
+							fmt.Printf("[%v:%v] ri:%v, m:%v\n", file, line, ri, m)
 						}
 						m = regMask(1) << ri
 						if isDebug(f.Name) {
-							fmt.Printf("ri:%v, m:%v\n", ri, m)
+							_, file, line, _ := runtime.Caller(0)
+							fmt.Printf("[%v:%v] ri:%v, m:%v\n", file, line, ri, m)
 						}
 						break
 					}
 					if isDebug(f.Name) {
-						fmt.Printf("m:%v\n", m)
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] m:%v\n", file, line, m)
 					}
 
 				}
 				if isDebug(f.Name) {
-					fmt.Printf("m:%v\n", m)
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] m:%v\n", file, line, m)
 				}
 				if m != 0 {
 					r := pickReg(m)
 					if isDebug(f.Name) {
-						fmt.Printf("r:%v\n", r)
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] r:%v\n", file, line, r)
 					}
 					phiRegs[i] = r
 					phiUsed |= regMask(1) << r
@@ -1231,6 +1264,12 @@ func (s *regAllocState) regalloc(f *Func) {
 				}
 				// register-based phi
 				s.assignReg(r, v, v)
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] reg:%v, regs:%v, used:%v, home:%v\n",
+						file, line,
+						s.regs[r], s.values[v.ID], s.used, s.f.RegAlloc[v.ID])
+				}
 			}
 
 			// Deallocate any values which are no longer live. Phis are excluded.
@@ -1271,16 +1310,18 @@ func (s *regAllocState) regalloc(f *Func) {
 				}
 			}
 			if isDebug(f.Name) {
-				fmt.Printf("after phis\n")
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] after phis\n", file, line)
 				for _, x := range s.startRegs[b.ID] {
-					fmt.Printf("  %s: v%d\n", &s.registers[x.r], x.v.ID)
+					fmt.Printf("[%v:%v]   %s: v%d\n", file, line, &s.registers[x.r], x.v.ID)
 				}
 			}
 		}
 
 		if isDebug(f.Name) {
+			_, file, line, _ := runtime.Caller(0)
 			for _, v := range phis {
-				fmt.Printf("phis value:%s\n", v.LongString())
+				fmt.Printf("[%v:%v] phis value:%s\n", file, line, v.LongString())
 			}
 		}
 		// Allocate space to record the desired registers for each value.
@@ -1368,10 +1409,11 @@ func (s *regAllocState) regalloc(f *Func) {
 		// Process all the non-phi values.
 		for idx, v := range oldSched {
 			if s.f.pass.debug > regDebug {
-				fmt.Printf("  processing %s\n", v.LongString())
+				fmt.Printf("   processing %s\n", v.LongString())
 			}
 			if isDebug(f.Name) {
-				fmt.Printf("  processing %s\n", v.LongString())
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v]   processing %s\n", file, line, v.LongString())
 			}
 
 			regspec := s.regspec(v.Op)
@@ -1416,7 +1458,8 @@ func (s *regAllocState) regalloc(f *Func) {
 			}
 			if v.Op == OpArg {
 				if isDebug(f.Name) {
-					fmt.Printf("value op:%v\n", v.Op)
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] value op:%v\n", file, line, v.Op)
 				}
 				// Args are "pre-spilled" values. We don't allocate
 				// any register here. We just set up the spill pointer to
@@ -1454,7 +1497,8 @@ func (s *regAllocState) regalloc(f *Func) {
 				continue
 			}
 			if isDebug(f.Name) {
-				fmt.Printf("regspec.inputs len:%d, regspec.outputs len:%d\n",
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] regspec.inputs len:%d, regspec.outputs len:%d\n", file, line,
 					len(regspec.inputs), len(regspec.outputs))
 			}
 
@@ -1501,8 +1545,9 @@ func (s *regAllocState) regalloc(f *Func) {
 				}
 			}
 			if isDebug(f.Name) {
-				fmt.Printf("value %s\n", v.LongString())
-				fmt.Printf("  out:")
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] value %s\n", file, line, v.LongString())
+				fmt.Printf("[%v:%v]   out:", file, line)
 				for _, r := range dinfo[idx].out {
 					if r != noRegister {
 						fmt.Printf(" %s", &s.registers[r])
@@ -1510,7 +1555,7 @@ func (s *regAllocState) regalloc(f *Func) {
 				}
 				fmt.Println()
 				for i := 0; i < len(v.Args) && i < 3; i++ {
-					fmt.Printf("  in%d:", i)
+					fmt.Printf("[%v:%v]  in%d:", file, line, i)
 					for _, r := range dinfo[idx].in[i] {
 						if r != noRegister {
 							fmt.Printf(" %s", &s.registers[r])
@@ -1664,7 +1709,8 @@ func (s *regAllocState) regalloc(f *Func) {
 
 					mask := out.regs & s.allocatable &^ used
 					if isDebug(f.Name) {
-						fmt.Printf("regs:%v, allocatable:%v, used:%v, mask:%v\n",
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] regs:%v, allocatable:%v, used:%v, mask:%v\n", file, line,
 							out.regs, s.allocatable, used, mask)
 					}
 
@@ -1724,17 +1770,20 @@ func (s *regAllocState) regalloc(f *Func) {
 						outLocs[1] = &s.registers[r]
 					}
 					if isDebug(f.Name) {
-						fmt.Printf("set home\n")
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] set home\n", file, line)
 					}
 					s.f.setHome(v, outLocs)
 					// Note that subsequent SelectX instructions will do the assignReg calls.
 				} else {
 					if isDebug(f.Name) {
-						fmt.Printf("value:%s, assign reg. register:%v\n", v, outRegs[0])
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] value:%s, assign reg. register:%v\n", file, line, v, outRegs[0])
 					}
 					if r := outRegs[0]; r != noRegister {
 						if isDebug(f.Name) {
-							fmt.Printf("assign reg. r:%v, v:%s\n", r, v)
+							_, file, line, _ := runtime.Caller(0)
+							fmt.Printf("[%v:%v] assign reg. r:%v, v:%s\n", file, line, r, v)
 						}
 						s.assignReg(r, v, v)
 					}
@@ -1770,7 +1819,8 @@ func (s *regAllocState) regalloc(f *Func) {
 				fmt.Printf("  processing control %s\n", v.LongString())
 			}
 			if isDebug(f.Name) {
-				fmt.Printf("  processing control %s\n", v.LongString())
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v]   processing control %s\n", file, line, v.LongString())
 			}
 			// We assume that a control input can be passed in any
 			// type-compatible register. If this turns out not to be true,
@@ -1928,7 +1978,8 @@ func (s *regAllocState) regalloc(f *Func) {
 				continue
 			}
 			if isDebug(f.Name) {
-				fmt.Printf("add end reg for block:%s. r:%v, v:%s, c:%s\n",
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] add end reg for block:%s. r:%v, v:%s, c:%s\n", file, line,
 					b, r, v, s.regs[r].c)
 			}
 			regList = append(regList, endReg{r, v, s.regs[r].c})
@@ -1969,7 +2020,8 @@ func (s *regAllocState) regalloc(f *Func) {
 				fmt.Printf("live-at-end spill for %s at %s\n", s.orig[e.ID], b)
 			}
 			if isDebug(f.Name) {
-				fmt.Printf("live-at-end spill for %s at %s\n", s.orig[e.ID], b)
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] live-at-end spill for %s at %s\n", file, line, s.orig[e.ID], b)
 			}
 
 			spill := s.makeSpill(s.orig[e.ID], b)
@@ -1993,9 +2045,10 @@ func (s *regAllocState) regalloc(f *Func) {
 		}
 
 		if isDebug(f.Name) {
-			fmt.Printf("b:%s values\n", b)
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] b:%s values\n", file, line, b)
 			for _, v := range b.Values {
-				fmt.Printf("value:%s\n", v.LongString())
+				fmt.Printf("[%v:%v] value:%s\n", file, line, v.LongString())
 			}
 		}
 	}
@@ -2021,7 +2074,8 @@ func (s *regAllocState) regalloc(f *Func) {
 					fmt.Printf("delete copied value %s\n", c.LongString())
 				}
 				if isDebug(f.Name) {
-					fmt.Printf("delete copied value %s\n", c.LongString())
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] delete copied value %s\n", file, line, c.LongString())
 				}
 
 				c.RemoveArg(0)
@@ -2706,9 +2760,10 @@ func (s *regAllocState) computeLive() {
 	// out to all of them.
 	po := f.postorder()
 	if isDebug(f.Name) {
-		fmt.Printf("block list:\n")
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] block list:\n", file, line)
 		for _, b := range po {
-			fmt.Printf("block:%s, ", b)
+			fmt.Printf("[%v:%v] block:%s, ", file, line, b)
 			fmt.Printf("value list:[")
 			for _, v := range b.ControlValues() {
 				fmt.Printf("%s,", v)
@@ -2723,14 +2778,16 @@ func (s *regAllocState) computeLive() {
 	for {
 		loop_count += 1
 		if isDebug(f.Name) {
-			fmt.Printf("loop index:%d\n", loop_count)
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] loop index:%d\n", file, line, loop_count)
 		}
 
 		changed := false
 
 		for _, b := range po {
 			if isDebug(f.Name) {
-				fmt.Printf("process block:%s\n", b)
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] process block:%s\n", file, line, b)
 			}
 
 			// Start with known live values at the end of the block.
@@ -2802,7 +2859,8 @@ func (s *regAllocState) computeLive() {
 				}
 			}
 			if isDebug(f.Name) {
-				fmt.Printf("live:")
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] live:", file, line)
 				for _, e := range live.contents() {
 					fmt.Printf("%d,", e.key)
 				}
@@ -2813,7 +2871,8 @@ func (s *regAllocState) computeLive() {
 			// invariant: live contains the values live at the start of b (excluding phi inputs)
 			for i, e := range b.Preds {
 				if isDebug(f.Name) {
-					fmt.Printf("process pred block:%s\n", e.b)
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] process pred block:%s\n", file, line, e.b)
 				}
 				p := e.b
 				// Compute additional distance for the edge.
@@ -2844,14 +2903,16 @@ func (s *regAllocState) computeLive() {
 				// Add new live values from scanning this block.
 				for _, e := range live.contents() {
 					if isDebug(f.Name) {
-						fmt.Printf("process key:%d\n", e.key)
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] process key:%d\n", file, line, e.key)
 					}
 
 					d := e.val + delta
 					if !t.contains(e.key) || d < t.get(e.key) {
 						update = true
 						if isDebug(f.Name) {
-							fmt.Printf("add key:%d\n", e.key)
+							_, file, line, _ := runtime.Caller(0)
+							fmt.Printf("[%v:%v] add key:%d\n", file, line, e.key)
 						}
 
 						t.set(e.key, d, e.aux)
@@ -2862,13 +2923,15 @@ func (s *regAllocState) computeLive() {
 				// simultaneously happening at the start of the block).
 				for _, v := range phis {
 					if isDebug(f.Name) {
-						fmt.Printf("process phi:%s\n", v)
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] process phi:%s\n", file, line, v)
 					}
 
 					id := v.Args[i].ID
 					if s.values[id].needReg && (!t.contains(id) || delta < t.get(id)) {
 						if isDebug(f.Name) {
-							fmt.Printf("add phi arg:%d\n", id)
+							_, file, line, _ := runtime.Caller(0)
+							fmt.Printf("[%v:%v] add phi arg:%d\n", file, line, id)
 						}
 
 						update = true
@@ -2928,9 +2991,10 @@ func (s *regAllocState) computeLive() {
 		}
 	}
 	if isDebug(f.Name) {
-		fmt.Println("live values at end of each block")
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Println("[%v:%v] live values at end of each block", file, line)
 		for _, b := range f.Blocks {
-			fmt.Printf("  %s:", b)
+			fmt.Printf("[%v:%v]   %s:", file, line, b)
 			for _, x := range s.live[b.ID] {
 				fmt.Printf(" v%d(%d)", x.ID, x.dist)
 				for _, e := range s.desired[b.ID].entries {
