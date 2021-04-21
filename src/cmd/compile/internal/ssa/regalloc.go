@@ -2287,8 +2287,30 @@ func (s *regAllocState) regalloc(f *Func) {
 	// (StoreReg, stack-based phis, inputs, ...)
 	stacklive := stackalloc(s.f, s.spillLive)
 
+	if isDebug(f.Name) {
+		for _, b := range s.visitOrder {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] b:%s\n", file, line, b)
+			for _, v := range b.Values {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] v:%s\n", file, line, v.LongString())
+			}
+		}
+	}
+
 	// Fix up all merge edges.
 	s.shuffle(stacklive)
+
+	if isDebug(f.Name) {
+		for _, b := range s.visitOrder {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] b:%s\n", file, line, b)
+			for _, v := range b.Values {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] v:%s\n", file, line, v.LongString())
+			}
+		}
+	}
 
 	// Erase any copies we never used.
 	// Also, an unused copy might be the only use of another copy,
