@@ -2594,7 +2594,7 @@ func (e *edgeState) setup(idx int, srcReg []endReg, dstReg []startReg, stacklive
 		fmt.Printf("edge %s->%s\n", e.p, e.b)
 	}
 
-	if isDebug(s.f.Name) {
+	if isDebug(e.s.f.Name) {
 		_, file, line, _ := runtime.Caller(0)
 		fmt.Printf("[%v:%v] srcReg:%v, dstReg:%v, stacklive:%v\n", file, line, srcReg, dstReg, stacklive)
 		for _, v := range srcReg {
@@ -2646,7 +2646,7 @@ func (e *edgeState) setup(idx int, srcReg []endReg, dstReg []startReg, stacklive
 	for _, x := range dstReg {
 		dsts = append(dsts, dstRecord{&e.s.registers[x.r], x.v.ID, nil, x.pos})
 	}
-	if isDebug(s.f.Name) {
+	if isDebug(e.s.f.Name) {
 		_, file, line, _ := runtime.Caller(0)
 		fmt.Printf("[%v:%v] dst:%+v\n", dsts)
 	}
@@ -2661,7 +2661,7 @@ func (e *edgeState) setup(idx int, srcReg []endReg, dstReg []startReg, stacklive
 		}
 		dsts = append(dsts, dstRecord{loc, v.Args[idx].ID, &v.Args[idx], v.Pos})
 	}
-	if isDebug(s.f.Name) {
+	if isDebug(e.s.f.Name) {
 		_, file, line, _ := runtime.Caller(0)
 		fmt.Printf("[%v:%v] dst:%+v\n", dsts)
 	}
