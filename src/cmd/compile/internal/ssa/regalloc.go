@@ -2486,6 +2486,17 @@ func (s *regAllocState) placeSpills() {
 
 // shuffle fixes up all the merge edges (those going into blocks of indegree > 1).
 func (s *regAllocState) shuffle(stacklive [][]ID) {
+	if isDebug(s.f.Name) {
+		for i := range stacklive {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] block:%d\n", file, line, i)
+			for _, j := range stacklive[i] {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] value:%d\n", file, line, j)
+			}
+		}
+	}
+
 	var e edgeState
 	e.s = s
 	e.cache = map[ID][]*Value{}
