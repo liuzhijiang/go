@@ -380,6 +380,11 @@ func (s *regAllocState) assignReg(r register, v *Value, c *Value) {
 	s.values[v.ID].regs |= regMask(1) << r
 	s.used |= regMask(1) << r
 	s.f.setHome(c, &s.registers[r])
+	if isDebug(s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] set home. value:%s, register:%v\n", file, line, c, &s.registers[r])
+	}
+
 }
 
 // allocReg chooses a register from the set of registers in mask.
@@ -1430,6 +1435,11 @@ func (s *regAllocState) regalloc(f *Func) {
 		for _, e := range b.Succs {
 			succ := e.b
 			// TODO: prioritize likely successor?
+			if isDebug(f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] succ:%s, start regs len:%d\n", file, line,
+					succ, len(s.startRegs[succ.ID]))
+			}
 			for _, x := range s.startRegs[succ.ID] {
 				desired.add(x.v.ID, x.r)
 			}
@@ -1444,6 +1454,11 @@ func (s *regAllocState) regalloc(f *Func) {
 				}
 				rp, ok := s.f.getHome(v.ID).(*Register)
 				if !ok {
+					if isDebug(f.Name) {
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v]\n", file, line)
+					}
+
 					// If v is not assigned a register, pick a register assigned to one of v's inputs.
 					// Hopefully v will get assigned that register later.
 					// If the inputs have allocated register information, add it to desired,
@@ -1458,6 +1473,11 @@ func (s *regAllocState) regalloc(f *Func) {
 						continue
 					}
 				}
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] rp:%v\n", file, line, rp)
+				}
+
 				desired.add(v.Args[pidx].ID, register(rp.num))
 			}
 		}
