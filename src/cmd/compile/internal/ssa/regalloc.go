@@ -2777,12 +2777,28 @@ func (e *edgeState) process() {
 // processDest generates code to put value vid into location loc. Returns true
 // if progress was made.
 func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XPos) bool {
+	if isDebug(e.s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v]\n", file, line)
+	}
 	pos = pos.WithNotStmt()
 	occupant := e.contents[loc]
+	if isDebug(e.s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] vid:%d\n", file, line, vid)
+	}
 	if occupant.vid == vid {
+		if isDebug(e.s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v]\n", file, line)
+		}
 		// Value is already in the correct place.
 		e.contents[loc] = contentRecord{vid, occupant.c, true, pos}
 		if splice != nil {
+			if isDebug(e.s.f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v]\n", file, line)
+			}
 			(*splice).Uses--
 			*splice = occupant.c
 			occupant.c.Uses++
@@ -2792,19 +2808,41 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 		// deadcode elimination.
 		if _, ok := e.s.copies[occupant.c]; ok {
 			// The copy at occupant.c was used to avoid spill.
+			if isDebug(e.s.f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v]\n", file, line)
+			}
 			e.s.copies[occupant.c] = true
 		}
+		if isDebug(e.s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v]\n", file, line)
+		}
 		return true
+	}
+	if isDebug(e.s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v]\n", file, line)
 	}
 
 	// Check if we're allowed to clobber the destination location.
 	if len(e.cache[occupant.vid]) == 1 && !e.s.values[occupant.vid].rematerializeable {
+		if isDebug(e.s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v]\n", file, line)
+		}
+
 		// We can't overwrite the last copy
 		// of a value that needs to survive.
 		return false
 	}
 
 	// Copy from a source of v, register preferred.
+	if isDebug(e.s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v]\n", file, line)
+	}
+
 	v := e.s.orig[vid]
 	var c *Value
 	var src Location
@@ -2812,12 +2850,34 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 		fmt.Printf("moving v%d to %s\n", vid, loc)
 		fmt.Printf("sources of v%d:", vid)
 	}
+
+	if isDebug(e.s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v]\n", file, line)
+		fmt.Printf("[%v:%v] moving v%d to %s\n", file, line, vid, loc)
+		fmt.Printf("[%v:%v] sources of v%d:", file, line, vid)
+	}
+
 	for _, w := range e.cache[vid] {
+		if isDebug(e.s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v]\n", file, line)
+		}
 		h := e.s.f.getHome(w.ID)
 		if e.s.f.pass.debug > regDebug {
 			fmt.Printf(" %s:%s", h, w)
 		}
+		if isDebug(e.s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] %s:%s\n", file, line, h, w)
+		}
+
 		_, isreg := h.(*Register)
+		if isDebug(e.s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] isreg:%v\n", file, line, isreg)
+		}
+
 		if src == nil || isreg {
 			c = w
 			src = h
@@ -2830,7 +2890,21 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 			fmt.Printf(" [no source]\n")
 		}
 	}
+	if isDebug(e.s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		if src != nil {
+			fmt.Printf("[%v:%v] [use %s]\n", file, line, src)
+		} else {
+			fmt.Printf("[%v:%v] [no source]\n", file, line)
+		}
+	}
+
 	_, dstReg := loc.(*Register)
+
+	if isDebug(e.s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] dstReg:%v\n", file, line, dstReg)
+	}
 
 	// Pre-clobber destination. This avoids the
 	// following situation:
