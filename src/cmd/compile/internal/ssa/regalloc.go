@@ -2921,12 +2921,12 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 	if c == nil || e.s.values[vid].rematerializeable {
 		if isDebug(e.s.f.Name) {
 			_, file, line, _ := runtime.Caller(0)
-			fmt.Printf("[%v:%v\n", file, line)
+			fmt.Printf("[%v:%v]\n", file, line)
 		}
 		if !e.s.values[vid].rematerializeable {
 			if isDebug(e.s.f.Name) {
 				_, file, line, _ := runtime.Caller(0)
-				fmt.Printf("[%v:%v\n", file, line)
+				fmt.Printf("[%v:%v]\n", file, line)
 			}
 
 			e.s.f.Fatalf("can't find source for %s->%s: %s\n", e.p, e.b, v.LongString())
@@ -2934,14 +2934,14 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 		if dstReg {
 			if isDebug(e.s.f.Name) {
 				_, file, line, _ := runtime.Caller(0)
-				fmt.Printf("[%v:%v\n", file, line)
+				fmt.Printf("[%v:%v]\n", file, line)
 			}
 
 			x = v.copyInto(e.p)
 		} else {
 			if isDebug(e.s.f.Name) {
 				_, file, line, _ := runtime.Caller(0)
-				fmt.Printf("[%v:%v\n", file, line)
+				fmt.Printf("[%v:%v]\n", file, line)
 			}
 
 			// Rematerialize into stack slot. Need a free
@@ -2958,7 +2958,7 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 	} else {
 		if isDebug(e.s.f.Name) {
 			_, file, line, _ := runtime.Caller(0)
-			fmt.Printf("[%v:%v\n", file, line)
+			fmt.Printf("[%v:%v]\n", file, line)
 		}
 
 		// Emit move from src to dst.
@@ -2966,7 +2966,7 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 		if srcReg {
 			if isDebug(e.s.f.Name) {
 				_, file, line, _ := runtime.Caller(0)
-				fmt.Printf("[%v:%v\n", file, line)
+				fmt.Printf("[%v:%v]\n", file, line)
 			}
 
 			if dstReg {
@@ -2977,7 +2977,7 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 		} else {
 			if isDebug(e.s.f.Name) {
 				_, file, line, _ := runtime.Caller(0)
-				fmt.Printf("[%v:%v\n", file, line)
+				fmt.Printf("[%v:%v]\n", file, line)
 			}
 
 			if dstReg {
@@ -2994,7 +2994,7 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 	}
 	if isDebug(e.s.f.Name) {
 		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v\n", file, line)
+		fmt.Printf("[%v:%v]\n", file, line)
 	}
 
 	e.set(loc, vid, x, true, pos)
