@@ -484,13 +484,28 @@ func (s *regAllocState) makeSpill(v *Value, b *Block) *Value {
 // undone until the caller allows it by clearing nospill. Returns a
 // *Value which is either v or a copy of v allocated to the chosen register.
 func (s *regAllocState) allocValToReg(v *Value, mask regMask, nospill bool, pos src.XPos) *Value {
+	if isDebug(s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+	}
+
 	if s.f.Config.ctxt.Arch.Arch == sys.ArchWasm && v.rematerializeable() {
+		if isDebug(s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+		}
+
 		c := v.copyIntoWithXPos(s.curBlock, pos)
 		c.OnWasmStack = true
 		s.setOrig(c, v)
 		return c
 	}
 	if v.OnWasmStack {
+		if isDebug(s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+		}
+
 		return v
 	}
 
@@ -498,7 +513,17 @@ func (s *regAllocState) allocValToReg(v *Value, mask regMask, nospill bool, pos 
 	pos = pos.WithNotStmt()
 	// Check if v is already in a requested register.
 	if mask&vi.regs != 0 {
+		if isDebug(s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+		}
+
 		r := pickReg(mask & vi.regs)
+		if isDebug(s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] r:%v\n", file, line, r)
+		}
+
 		if s.regs[r].v != v || s.regs[r].c == nil {
 			panic("bad register state")
 		}
@@ -512,13 +537,28 @@ func (s *regAllocState) allocValToReg(v *Value, mask regMask, nospill bool, pos 
 	// If nospill is set, the value is used immediately, so it can live on the WebAssembly stack.
 	onWasmStack := nospill && s.f.Config.ctxt.Arch.Arch == sys.ArchWasm
 	if !onWasmStack {
+		if isDebug(s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+		}
+
 		// Allocate a register.
 		r = s.allocReg(mask, v)
+	}
+
+	if isDebug(s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] r:%v\n", file, line, r)
 	}
 
 	// Allocate v to the new register.
 	var c *Value
 	if vi.regs != 0 {
+		if isDebug(s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+		}
+
 		// Copy from a register that v is already in.
 		r2 := pickReg(vi.regs)
 		if s.regs[r2].v != v {
@@ -526,9 +566,19 @@ func (s *regAllocState) allocValToReg(v *Value, mask regMask, nospill bool, pos 
 		}
 		c = s.curBlock.NewValue1(pos, OpCopy, v.Type, s.regs[r2].c)
 	} else if v.rematerializeable() {
+		if isDebug(s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+		}
+
 		// Rematerialize instead of loading from the spill location.
 		c = v.copyIntoWithXPos(s.curBlock, pos)
 	} else {
+		if isDebug(s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+		}
+
 		// Load v from its spill location.
 		spill := s.makeSpill(v, s.curBlock)
 		if s.f.pass.debug > logSpills {
@@ -540,11 +590,26 @@ func (s *regAllocState) allocValToReg(v *Value, mask regMask, nospill bool, pos 
 	s.setOrig(c, v)
 
 	if onWasmStack {
+		if isDebug(s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+		}
+
 		c.OnWasmStack = true
 		return c
 	}
 
+	if isDebug(s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+	}
+
 	s.assignReg(r, v, c)
+	if isDebug(s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+	}
+
 	if c.Op == OpLoadReg && s.isGReg(r) {
 		s.f.Fatalf("allocValToReg.OpLoadReg targeting g: " + c.LongString())
 	}
@@ -1570,6 +1635,11 @@ func (s *regAllocState) regalloc(f *Func) {
 			args = append(args[:0], v.Args...)
 			for _, i := range regspec.inputs {
 				mask := i.regs
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
+				}
+
 				if mask&s.values[args[i.idx].ID].regs == 0 {
 					// Need a new register for the input.
 					mask &= s.allocatable
@@ -1588,6 +1658,10 @@ func (s *regAllocState) regalloc(f *Func) {
 					if mask&^desired.avoid != 0 {
 						mask &^= desired.avoid
 					}
+				}
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v] mask:%v\n", file, line, mask)
 				}
 				args[i.idx] = s.allocValToReg(args[i.idx], mask, true, v.Pos)
 			}
