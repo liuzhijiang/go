@@ -1414,7 +1414,7 @@ func (s *regAllocState) regalloc(f *Func) {
 
 		if isDebug(f.Name) {
 			_, file, line, _ := runtime.Caller(0)
-			fmt.Printf("[%v:%v] desired\n", file, line)
+			fmt.Printf("[%v:%v] desired, len:%d\n", file, line, len(desired.entries))
 			for i := range desired.entries {
 				fmt.Printf("[%v:%v] key:%v, registers:%v\n",
 					file, line,
@@ -1492,7 +1492,7 @@ func (s *regAllocState) regalloc(f *Func) {
 
 		if isDebug(f.Name) {
 			_, file, line, _ := runtime.Caller(0)
-			fmt.Printf("[%v:%v] desired\n", file, line)
+			fmt.Printf("[%v:%v] desired, len:%d\n", file, line, len(desired.entries))
 			for i := range desired.entries {
 				fmt.Printf("[%v:%v] key:%v, registers:%v\n",
 					file, line,
