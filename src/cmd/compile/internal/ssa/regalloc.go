@@ -510,6 +510,11 @@ func (s *regAllocState) allocValToReg(v *Value, mask regMask, nospill bool, pos 
 	}
 
 	vi := &s.values[v.ID]
+	if isDebug(s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] mask:%v, vi.regs:%v\n", file, line, mask, vi.regs)
+	}
+
 	pos = pos.WithNotStmt()
 	// Check if v is already in a requested register.
 	if mask&vi.regs != 0 {
