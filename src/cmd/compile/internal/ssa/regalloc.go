@@ -2855,7 +2855,7 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 		_, file, line, _ := runtime.Caller(0)
 		fmt.Printf("[%v:%v]\n", file, line)
 		fmt.Printf("[%v:%v] moving v%d to %s\n", file, line, vid, loc)
-		fmt.Printf("[%v:%v] sources of v%d:", file, line, vid)
+		fmt.Printf("[%v:%v] sources of v%d:\n", file, line, vid)
 	}
 
 	for _, w := range e.cache[vid] {
@@ -2903,7 +2903,7 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 
 	if isDebug(e.s.f.Name) {
 		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] dstReg:%v\n", file, line, dstReg)
+		fmt.Printf("[%v:%v] loc:%s, dstReg:%v\n", file, line, loc, dstReg)
 	}
 
 	// Pre-clobber destination. This avoids the
@@ -2919,12 +2919,31 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 	e.erase(loc)
 	var x *Value
 	if c == nil || e.s.values[vid].rematerializeable {
+		if isDebug(e.s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v\n", file, line)
+		}
 		if !e.s.values[vid].rematerializeable {
+			if isDebug(e.s.f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v\n", file, line)
+			}
+
 			e.s.f.Fatalf("can't find source for %s->%s: %s\n", e.p, e.b, v.LongString())
 		}
 		if dstReg {
+			if isDebug(e.s.f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v\n", file, line)
+			}
+
 			x = v.copyInto(e.p)
 		} else {
+			if isDebug(e.s.f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v\n", file, line)
+			}
+
 			// Rematerialize into stack slot. Need a free
 			// register to accomplish this.
 			r := e.findRegFor(v.Type)
@@ -2937,15 +2956,30 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 			x = e.p.NewValue1(pos, OpStoreReg, loc.(LocalSlot).Type, x)
 		}
 	} else {
+		if isDebug(e.s.f.Name) {
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v\n", file, line)
+		}
+
 		// Emit move from src to dst.
 		_, srcReg := src.(*Register)
 		if srcReg {
+			if isDebug(e.s.f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v\n", file, line)
+			}
+
 			if dstReg {
 				x = e.p.NewValue1(pos, OpCopy, c.Type, c)
 			} else {
 				x = e.p.NewValue1(pos, OpStoreReg, loc.(LocalSlot).Type, c)
 			}
 		} else {
+			if isDebug(e.s.f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v\n", file, line)
+			}
+
 			if dstReg {
 				x = e.p.NewValue1(pos, OpLoadReg, c.Type, c)
 			} else {
@@ -2958,6 +2992,11 @@ func (e *edgeState) processDest(loc Location, vid ID, splice **Value, pos src.XP
 			}
 		}
 	}
+	if isDebug(e.s.f.Name) {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v\n", file, line)
+	}
+
 	e.set(loc, vid, x, true, pos)
 	if x.Op == OpLoadReg && e.s.isGReg(register(loc.(*Register).num)) {
 		e.s.f.Fatalf("processDest.OpLoadReg targeting g: " + x.LongString())
