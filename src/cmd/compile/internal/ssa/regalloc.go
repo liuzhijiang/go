@@ -1268,7 +1268,7 @@ func (s *regAllocState) regalloc(f *Func) {
 					_, file, line, _ := runtime.Caller(0)
 					fmt.Printf("[%v:%v] reg:%v, regs:%v, used:%v, home:%v\n",
 						file, line,
-						s.regs[r], s.values[v.ID], s.used, s.f.RegAlloc[v.ID])
+						s.regs[r], s.values[v.ID].regs, s.used, s.f.RegAlloc[v.ID])
 				}
 			}
 
