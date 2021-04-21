@@ -1136,6 +1136,14 @@ func (s *regAllocState) regalloc(f *Func) {
 			// Third pass - pick registers for phis whose input
 			// was not in a register in the primary predecessor.
 			for i, v := range phis {
+				if isDebug(f.Name) {
+					fmt.Printf("v:%s, need reg:%v\n",
+						v, s.values[v.ID].needReg)
+				}
+				if isDebug(f.Name) {
+					fmt.Printf("process phis value:%s, r:%v\n", v, phiRegs[i])
+				}
+
 				if !s.values[v.ID].needReg {
 					continue
 				}
@@ -1143,26 +1151,59 @@ func (s *regAllocState) regalloc(f *Func) {
 					continue
 				}
 				m := s.compatRegs(v.Type) &^ phiUsed &^ s.used
+				if isDebug(f.Name) {
+					fmt.Printf("m:%v\n", m)
+				}
 				// If one of the other inputs of v is in a register, and the register is available,
 				// select this register, which can save some unnecessary copies.
 				for i, pe := range b.Preds {
+					if isDebug(f.Name) {
+						fmt.Printf("i:%d, idx:%d, pe:%v\n", i, idx, pe)
+					}
 					if int32(i) == idx {
 						continue
 					}
 					ri := noRegister
+					if isDebug(f.Name) {
+						fmt.Printf("ri:%v\n", ri)
+						fmt.Printf("pe.b:%v, len:%v\n", pe.b, len(s.endRegs[pe.b.ID]))
+					}
 					for _, er := range s.endRegs[pe.b.ID] {
 						if er.v == s.orig[v.Args[i].ID] {
+							if isDebug(f.Name) {
+								fmt.Printf("er:%v, v.args[i].ID:%v, orig:%v",
+									er, i, v.Args[i].ID, s.orig[v.Args[i].ID])
+							}
 							ri = er.r
 							break
 						}
 					}
+					if isDebug(f.Name) {
+						fmt.Printf("ri:%v\n", ri)
+					}
 					if ri != noRegister && m>>ri&1 != 0 {
+						if isDebug(f.Name) {
+							fmt.Printf("ri:%v, m:%v\n", ri, m)
+						}
 						m = regMask(1) << ri
+						if isDebug(f.Name) {
+							fmt.Printf("ri:%v, m:%v\n", ri, m)
+						}
 						break
 					}
+					if isDebug(f.Name) {
+						fmt.Printf("m:%v\n", m)
+					}
+
+				}
+				if isDebug(f.Name) {
+					fmt.Printf("m:%v\n", m)
 				}
 				if m != 0 {
 					r := pickReg(m)
+					if isDebug(f.Name) {
+						fmt.Printf("r:%v\n", r)
+					}
 					phiRegs[i] = r
 					phiUsed |= regMask(1) << r
 				}
@@ -1229,6 +1270,11 @@ func (s *regAllocState) regalloc(f *Func) {
 			}
 		}
 
+		if isDebug(f.Name) {
+			for _, v := range phis {
+				fmt.Printf("phis value:%s\n", v.LongString())
+			}
+		}
 		// Allocate space to record the desired registers for each value.
 		if l := len(oldSched); cap(dinfo) < l {
 			dinfo = make([]dentry, l)
@@ -1745,30 +1791,72 @@ func (s *regAllocState) regalloc(f *Func) {
 		// predecessor of it, find live values that we use soon after
 		// the merge point and promote them to registers now.
 		if len(b.Succs) == 1 {
+			if isDebug(f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v]\n", file, line)
+			}
+
 			if s.f.Config.hasGReg && s.regs[s.GReg].v != nil {
 				s.freeReg(s.GReg) // Spill value in G register before any merge.
 			}
+			if isDebug(f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v]\n", file, line)
+			}
+
 			// For this to be worthwhile, the loop must have no calls in it.
 			top := b.Succs[0].b
 			loop := s.loopnest.b2l[top.ID]
 			if loop == nil || loop.header != top || loop.containsUnavoidableCall {
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
+
 				goto badloop
+			}
+			if isDebug(f.Name) {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v]\n", file, line)
 			}
 
 			// TODO: sort by distance, pick the closest ones?
 			for _, live := range s.live[b.ID] {
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
+
 				if live.dist >= unlikelyDistance {
 					// Don't preload anything live after the loop.
 					continue
 				}
 				vid := live.ID
 				vi := &s.values[vid]
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
+
 				if vi.regs != 0 {
 					continue
 				}
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
 				if vi.rematerializeable {
+					if isDebug(f.Name) {
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v]\n", file, line)
+					}
 					continue
 				}
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
+
 				v := s.orig[vid]
 				m := s.compatRegs(v.Type) &^ s.used
 				// Used desired register if available.
@@ -1784,12 +1872,32 @@ func (s *regAllocState) regalloc(f *Func) {
 						}
 					}
 				}
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
+
 				if m&^desired.avoid != 0 {
 					m &^= desired.avoid
 				}
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
+
 				if m != 0 {
+					if isDebug(f.Name) {
+						_, file, line, _ := runtime.Caller(0)
+						fmt.Printf("[%v:%v] v:%s, m:%v\n", file, line, v, m)
+					}
+
 					s.allocValToReg(v, m, false, b.Pos)
 				}
+				if isDebug(f.Name) {
+					_, file, line, _ := runtime.Caller(0)
+					fmt.Printf("[%v:%v]\n", file, line)
+				}
+
 			}
 		}
 	badloop:
@@ -1810,6 +1918,10 @@ func (s *regAllocState) regalloc(f *Func) {
 			v := s.regs[r].v
 			if v == nil {
 				continue
+			}
+			if isDebug(f.Name) {
+				fmt.Printf("add end reg for block:%s. r:%v, v:%s, c:%s\n",
+					b, r, v, s.regs[r].c)
 			}
 			regList = append(regList, endReg{r, v, s.regs[r].c})
 		}
@@ -1870,6 +1982,13 @@ func (s *regAllocState) regalloc(f *Func) {
 			s.values[e.ID].uses = nil
 			u.next = s.freeUseRecords
 			s.freeUseRecords = u
+		}
+
+		if isDebug(f.Name) {
+			fmt.Printf("b:%s values\n", b)
+			for _, v := range b.Values {
+				fmt.Printf("value:%s\n", v.LongString())
+			}
 		}
 	}
 
