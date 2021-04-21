@@ -2507,6 +2507,8 @@ func (s *regAllocState) shuffle(stacklive [][]ID) {
 	}
 
 	for _, b := range s.visitOrder {
+		_, file, line, _ := runtime.Caller(0)
+		fmt.Printf("[%v:%v] b:%s, b.Preds:%d\n", file, line, b, len(b.Preds))
 		if len(b.Preds) <= 1 {
 			continue
 		}
@@ -2514,8 +2516,22 @@ func (s *regAllocState) shuffle(stacklive [][]ID) {
 		for i, edge := range b.Preds {
 			p := edge.b
 			e.p = p
+			_, file, line, _ := runtime.Caller(0)
+			fmt.Printf("[%v:%v] p:%s\n", file, line, p)
+			for _, v := range p.Values {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] v:%s\n", file, line, v.LongString())
+			}
 			e.setup(i, s.endRegs[p.ID], s.startRegs[b.ID], stacklive[p.ID])
+			for _, v := range p.Values {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] v:%s\n", file, line, v.LongString())
+			}
 			e.process()
+			for _, v := range p.Values {
+				_, file, line, _ := runtime.Caller(0)
+				fmt.Printf("[%v:%v] v:%s\n", file, line, v.LongString())
+			}
 		}
 	}
 
