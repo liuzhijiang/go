@@ -1226,7 +1226,7 @@ func (e *Escape) walkOne(root *EscLocation, walkgen uint32, enqueue func(*EscLoc
 			}
 			derefs := base + edge.derefs
 			if Debug.m >= 2 {
-				fmt.Printf("next process src:%v, derefs:%d\n", edge.src.n, derefs)
+				myPrintf("next process src:%v, derefs:%d\n", edge.src.n, derefs)
 			}
 			if edge.src.walkgen != walkgen || edge.src.derefs > derefs {
 				edge.src.walkgen = walkgen
@@ -1272,7 +1272,9 @@ func (e *Escape) explainPath(root, src *EscLocation) []*logopt.LoggedOpt {
 }
 
 func (e *Escape) explainFlow(pos string, dst, srcloc *EscLocation, derefs int, notes *EscNote, explanation []*logopt.LoggedOpt) []*logopt.LoggedOpt {
-	fmt.Printf("in explainFlow\n")
+	if Debug.m >= 2 {
+		myPrintf("in explainFlow\n")
+	}
 	ops := "&"
 	if derefs >= 0 {
 		ops = strings.Repeat("*", derefs)

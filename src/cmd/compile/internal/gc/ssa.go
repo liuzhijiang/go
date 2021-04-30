@@ -21,8 +21,6 @@ import (
 	"cmd/internal/objabi"
 	"cmd/internal/src"
 	"cmd/internal/sys"
-
-	"runtime"
 )
 
 var ssaConfig *ssa.Config
@@ -449,8 +447,8 @@ func buildssa(fn *Node, worker int) *ssa.Func {
 	}
 
 	if Debug.m >= 2 {
-		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 	}
 	// Populate SSAable arguments.
 	for _, n := range fn.Func.Dcl {
@@ -462,20 +460,20 @@ func buildssa(fn *Node, worker int) *ssa.Func {
 	}
 
 	if Debug.m >= 2 {
-		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 	}
 
 	// Convert the AST-based IR to the SSA-based IR
 	s.stmtList(fn.Func.Enter)
 	if Debug.m >= 2 {
-		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 	}
 	s.stmtList(fn.Nbody)
 	if Debug.m >= 2 {
-		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 	}
 
 	// fallthrough to exit
@@ -1161,9 +1159,9 @@ func (s *state) stmtList(l Nodes) {
 	for _, n := range l.Slice() {
 		s.stmt(n)
 		if Debug.m >= 2 {
-			_, file, line, _ := runtime.Caller(0)
-			fmt.Printf("[%v:%v] n: %+v\n", file, line, n)
-			fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+			fmt.Printf("[%v:%v] n: %+v\n", n)
+			fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 		}
 
 	}
@@ -1697,8 +1695,8 @@ func (s *state) exit() *ssa.Block {
 	}
 
 	if Debug.m >= 2 {
-		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 	}
 
 	if Debug.m >= 2 {
@@ -1706,8 +1704,8 @@ func (s *state) exit() *ssa.Block {
 	}
 
 	if Debug.m >= 2 {
-		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 	}
 
 	// Run exit code. Typically, this code copies heap-allocated PPARAMOUT
@@ -1715,15 +1713,15 @@ func (s *state) exit() *ssa.Block {
 	s.stmtList(s.curfn.Func.Exit)
 
 	if Debug.m >= 2 {
-		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 	}
 
 	// Store SSAable PPARAMOUT variables back to stack locations.
 	for _, n := range s.returns {
 		if Debug.m >= 2 {
-			_, file, line, _ := runtime.Caller(0)
-			fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+			fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 		}
 
 		addr := s.decladdrs[n]
@@ -1738,8 +1736,8 @@ func (s *state) exit() *ssa.Block {
 		// PPARAMOUT slot for spilling it. That won't happen
 		// currently.
 		if Debug.m >= 2 {
-			_, file, line, _ := runtime.Caller(0)
-			fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+			fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 		}
 
 	}
@@ -1747,8 +1745,8 @@ func (s *state) exit() *ssa.Block {
 	// Do actual return.
 	m := s.mem()
 	if Debug.m >= 2 {
-		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", file, line, s.vars[&memVar])
+
+		fmt.Printf("[%v:%v] s.vars[&memVar]:%+v\n", s.vars[&memVar])
 	}
 	b := s.endBlock()
 	b.Kind = ssa.BlockRet
@@ -6354,8 +6352,8 @@ func (s *state) variable(name *Node, t *types.Type) *ssa.Value {
 
 func (s *state) mem() *ssa.Value {
 	if Debug.m >= 2 {
-		_, file, line, _ := runtime.Caller(0)
-		fmt.Printf("[%v:%v] mem:%+v\n", file, line, s.variable(&memVar, types.TypeMem))
+
+		myPrintf("mem:%+v\n", s.variable(&memVar, types.TypeMem))
 	}
 	return s.variable(&memVar, types.TypeMem)
 }

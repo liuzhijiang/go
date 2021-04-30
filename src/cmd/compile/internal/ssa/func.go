@@ -195,15 +195,15 @@ func (f *Func) newValue(op Op, t *types.Type, b *Block, pos src.XPos) *Value {
 	} else {
 		ID := f.vid.get()
 		if Debug.Debug_m >= 2 {
-			_, file, line, _ := runtime.Caller(0)
-			fmt.Printf("[%v:%v] ID:%d\n", file, line, ID)
+
+			myPrintf("ID:%d\n", ID)
 			if ID == 17 {
 				pc := make([]uintptr, 10) // at least 1 entry needed
 				n := runtime.Callers(0, pc)
 				for i := 0; i < n; i++ {
 					f := runtime.FuncForPC(pc[i])
 					call_file, call_line := f.FileLine(pc[i])
-					fmt.Printf("[%v:%v] %s:%d %s\n", file, line, call_file, call_line, f.Name())
+					myPrintf("%s:%d %s\n", call_file, call_line, f.Name())
 				}
 			}
 		}

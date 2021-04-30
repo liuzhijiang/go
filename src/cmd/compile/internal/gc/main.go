@@ -112,6 +112,12 @@ Key "pctab" supports values:
 	"pctospadj", "pctofile", "pctoline", "pctoinline", "pctopcdata"
 `
 
+func myPrintf(format string, a ...interface{}) (n int, err error) {
+	_, file, line, _ := runtime.Caller(1)
+	fmt.Printf("[%s:%d] ", file, line)
+	return fmt.Printf(format, a...)
+}
+
 func usage() {
 	fmt.Fprintf(os.Stderr, "usage: compile [options] file.go...\n")
 	objabi.Flagprint(os.Stderr)

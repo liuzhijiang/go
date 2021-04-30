@@ -27,6 +27,12 @@ type DebugFlags struct {
 	l, Debug_m, r, w int
 }
 
+func myPrintf(format string, a ...interface{}) (n int, err error) {
+	_, file, line, _ := runtime.Caller(1)
+	fmt.Printf("[%s:%d] ", file, line)
+	return fmt.Printf(format, a...)
+}
+
 var Debug DebugFlags
 
 // Compile is the main entry point for this package.
